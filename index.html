@@ -1,0 +1,2047 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PyBR — IDE em Português</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #f4f5fa;
+  --surface:   #ffffff;
+  --surface2:  #f9f9fc;
+  --surface3:  #eef0f8;
+  --border:    #dde0f0;
+  --border2:   #c5c9e0;
+  --accent:    #4f62e8;
+  --accent-lt: #eef0fd;
+  --accent3:   #0daa80;
+  --accent3lt: #e5f9f2;
+  --accent4:   #c87d00;
+  --text:      #252848;
+  --text-mid:  #636896;
+  --text-dim:  #a0a4c4;
+  --kw:        #6637c8;
+  --fn:        #1a6fdb;
+  --str:       #2a8c4a;
+  --num:       #c85a1a;
+  --comment:   #8a94b8;
+  --op:        #1a99b8;
+  --bool:      #b86000;
+  --err:       #d62b2b;
+  --ok:        #0daa80;
+  --lh:        1.7;
+  --r:         8px;
+  --r2:        12px;
+  --sh:        0 2px 12px rgba(40,45,100,.09);
+  --sh2:       0 12px 48px rgba(40,45,100,.18);
+}
+
+/* ── DARK MODE ── */
+body.dark {
+  --bg:        #13141f;
+  --surface:   #1c1e2e;
+  --surface2:  #181928;
+  --surface3:  #232538;
+  --border:    #2e3150;
+  --border2:   #3d4270;
+  --accent-lt: #1e2460;
+  --accent3lt: #0d2e24;
+  --text:      #e2e4f4;
+  --text-mid:  #8b90be;
+  --text-dim:  #4e5380;
+  --kw:        #b48eff;
+  --fn:        #60b0ff;
+  --str:       #7ddb8e;
+  --num:       #ff9c5b;
+  --comment:   #5a6090;
+  --op:        #4dd9f0;
+  --bool:      #ffcc66;
+  --err:       #ff6b6b;
+  --ok:        #3ddba8;
+  --sh:        0 2px 12px rgba(0,0,0,.35);
+  --sh2:       0 12px 48px rgba(0,0,0,.55);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ── TOP BAR ── */
+#topbar{display:flex;align-items:center;gap:10px;padding:0 20px;height:52px;background:var(--surface);border-bottom:1.5px solid var(--border);flex-shrink:0;box-shadow:0 1px 5px rgba(40,45,100,.06);user-select:none;}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;color:var(--text);display:flex;align-items:center;gap:8px;margin-right:4px;}
+.logo-icon{width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.logo-badge{background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:1px;}
+.sep{flex:1;}
+.vdiv{width:1px;height:24px;background:var(--border);margin:0 2px;flex-shrink:0;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border-radius:var(--r);border:none;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;font-weight:600;transition:all .14s;letter-spacing:.2px;white-space:nowrap;}
+.btn-run{background:var(--accent3);color:#fff;box-shadow:0 2px 8px rgba(13,170,128,.22);padding:5px 13px;font-size:.74rem;}
+.btn-run:hover{filter:brightness(1.08);transform:translateY(-1px);}
+.btn-run:active{transform:translateY(0);}
+.btn-ref{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(79,98,232,.18);}
+.btn-ref:hover{filter:brightness(1.08);transform:translateY(-1px);}
+.btn-clear{background:transparent;color:var(--text-dim);border:1.5px solid var(--border);padding:3px 9px;font-size:.68rem;}
+.btn-clear:hover{background:var(--surface3);color:var(--text);border-color:var(--border2);}
+.btn-ex{background:transparent;color:var(--text-mid);border:1.5px solid var(--border);}
+.btn-ex:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-lt);}
+
+/* ── MAIN ── */
+#main{display:flex;flex:1;overflow:hidden;}
+
+/* ── EDITOR ── */
+#editor-pane{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.pane-head{display:flex;align-items:center;gap:10px;padding:0 18px;height:38px;background:var(--surface);border-bottom:1.5px solid var(--border);font-size:.74rem;color:var(--text-mid);flex-shrink:0;}
+.tab-active{color:var(--text);font-weight:600;border-bottom:2.5px solid var(--accent);padding-bottom:1px;}
+#editor-wrap{flex:1;display:flex;overflow:hidden;background:var(--surface2);}
+#line-numbers{padding:18px 10px 18px 14px;text-align:right;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:.875rem;line-height:var(--lh);user-select:none;min-width:50px;background:var(--surface);border-right:1.5px solid var(--border);overflow:hidden;flex-shrink:0;white-space:pre;}
+#editor-inner{flex:1;position:relative;overflow:hidden;}
+#editor{position:absolute;inset:0;padding:18px;background:transparent;border:none;outline:none;color:transparent;caret-color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:.875rem;line-height:var(--lh);resize:none;white-space:pre;overflow:auto;z-index:2;}
+#hl{position:absolute;inset:0;padding:18px;font-family:'JetBrains Mono',monospace;font-size:.875rem;line-height:var(--lh);white-space:pre;overflow:hidden;pointer-events:none;z-index:1;color:var(--text);}
+
+/* ── OUTPUT ── */
+#output-pane{width:370px;min-width:180px;max-width:70vw;display:flex;flex-direction:column;border-left:1.5px solid var(--border);background:var(--surface);flex-shrink:0;position:relative;}
+#resizer{position:absolute;left:-4px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:10;background:transparent;transition:background .15s;}
+#resizer:hover,#resizer.dragging{background:var(--accent);opacity:.5;}
+#output{flex:1;padding:16px 18px;overflow-y:auto;font-size:.82rem;line-height:1.75;background:var(--surface2);}
+.ol{display:flex;align-items:flex-start;gap:8px;animation:fu .15s ease;}
+.op{color:var(--accent3);font-size:.7rem;margin-top:3px;flex-shrink:0;opacity:.6;}
+.ol.err{color:var(--err);}.ol.err .op{color:var(--err);}
+.ol.sys{color:var(--text-dim);font-style:italic;}.ol.sys .op{color:var(--text-dim);}
+#input-line{display:none;align-items:center;gap:8px;padding:10px 18px;border-top:1.5px solid var(--border);background:var(--surface);}
+#input-line span{color:var(--accent3);font-weight:700;}
+#input-box{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.82rem;}
+
+/* ── STATUS ── */
+#statusbar{height:26px;background:var(--surface);border-top:1.5px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:16px;font-size:.68rem;color:var(--text-dim);flex-shrink:0;}
+.s-ok{color:var(--ok);font-weight:600;}.s-err{color:var(--err);font-weight:600;}
+.s-right{margin-left:auto;display:flex;gap:16px;}
+
+/* ── MODAL ── */
+#overlay{display:none;position:fixed;inset:0;background:rgba(30,35,80,.32);backdrop-filter:blur(4px);z-index:1000;align-items:flex-start;justify-content:center;padding:32px 16px;overflow-y:auto;}
+#overlay.open{display:flex;}
+#modal{background:var(--surface);border-radius:var(--r2);box-shadow:var(--sh2);width:100%;max-width:920px;display:flex;flex-direction:column;overflow:hidden;height:calc(100vh - 64px);animation:mi .22s cubic-bezier(.22,1,.36,1);}
+@keyframes mi{from{opacity:0;transform:translateY(-16px) scale(.97);}to{opacity:1;transform:none;}}
+@keyframes fu{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+#modal-head{display:flex;align-items:center;gap:14px;padding:20px 28px;border-bottom:1.5px solid var(--border);flex-shrink:0;}
+#modal-head h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;flex:1;color:var(--text);}
+#msearch{padding:8px 14px;border:1.5px solid var(--border);border-radius:var(--r);background:var(--bg);font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--text);outline:none;width:220px;transition:border-color .13s;}
+#msearch:focus{border-color:var(--accent);}
+#mclose{width:32px;height:32px;border-radius:var(--r);border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-mid);font-size:1rem;transition:all .12s;}
+#mclose:hover{background:var(--surface3);color:var(--text);}
+
+#mcats{display:flex;gap:6px;padding:12px 28px;border-bottom:1.5px solid var(--border);overflow-x:auto;flex-shrink:0;}
+.cat{padding:5px 14px;border-radius:20px;border:1.5px solid var(--border);background:transparent;font-family:'JetBrains Mono',monospace;font-size:.71rem;font-weight:600;color:var(--text-mid);cursor:pointer;white-space:nowrap;transition:all .12s;}
+.cat:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-lt);}
+.cat.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+#mbody{padding:20px 24px;overflow-y:scroll;flex:1;display:flex;flex-direction:column;gap:12px;scrollbar-gutter:stable;}
+#ref-empty{display:none;color:var(--text-dim);text-align:center;padding:40px;font-size:.85rem;}
+
+/* ── REFERENCE CARDS ── */
+.rcard{border:1.5px solid var(--border);border-radius:var(--r);overflow:visible;transition:box-shadow .13s;flex-shrink:0;}
+.rcard:hover{box-shadow:var(--sh);}
+.rcard-head{display:flex;align-items:center;gap:10px;padding:13px 18px;background:var(--surface3);border-bottom:1.5px solid transparent;cursor:pointer;user-select:none;transition:background .12s;border-radius:var(--r);}
+.rcard-head:hover{background:var(--border);}
+.rcard.open .rcard-head{border-radius:var(--r) var(--r) 0 0;border-bottom-color:var(--border);}
+.rcmd{font-weight:700;font-size:.92rem;color:var(--kw);font-family:'JetBrains Mono',monospace;}
+.rdesc{font-size:.78rem;color:var(--text-mid);flex:1;}
+.rtag{font-size:.63rem;padding:2px 9px;border-radius:20px;border:1.5px solid var(--border);color:var(--text-dim);font-weight:600;flex-shrink:0;}
+.rchev{color:var(--text-dim);font-size:.72rem;transition:transform .14s;flex-shrink:0;}
+.rcard.open .rchev{transform:rotate(90deg);}
+
+.rbody{display:none;padding:18px;background:var(--surface);flex-direction:column;gap:14px;border:1.5px solid var(--border);border-top:none;border-radius:0 0 var(--r) var(--r);}
+.rcard.open .rbody{display:flex;}
+
+.rlabel{font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;}
+
+.rsyntax{
+  background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r);
+  padding:12px 16px;font-family:'JetBrains Mono',monospace;font-size:.8rem;line-height:1.65;
+  white-space:pre;overflow-y:scroll;overflow-x:auto;
+  min-height:60px;max-height:160px;
+  scrollbar-width:thin;scrollbar-color:var(--border2) var(--surface3);
+}
+.rexample{
+  background:var(--surface2);border:1.5px solid var(--border);border-left:3.5px solid var(--accent3);
+  border-radius:var(--r);padding:12px 16px;font-family:'JetBrains Mono',monospace;
+  font-size:.8rem;line-height:1.65;white-space:pre;overflow-y:scroll;overflow-x:auto;
+  min-height:60px;max-height:200px;
+  scrollbar-width:thin;scrollbar-color:var(--accent3) var(--accent3lt);
+}
+.rtry{align-self:flex-start;padding:7px 15px;background:var(--accent3lt);border:1.5px solid var(--accent3);border-radius:var(--r);color:var(--accent3);font-family:'JetBrains Mono',monospace;font-size:.74rem;font-weight:600;cursor:pointer;transition:all .13s;}
+.rtry:hover{background:var(--accent3);color:#fff;}
+
+/* webkit scrollbars for syntax/example blocks */
+.rsyntax::-webkit-scrollbar{width:7px;height:7px;}
+.rsyntax::-webkit-scrollbar-track{background:var(--surface3);border-radius:4px;}
+.rsyntax::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+.rsyntax::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+
+.rexample::-webkit-scrollbar{width:7px;height:7px;}
+.rexample::-webkit-scrollbar-track{background:var(--accent3lt);border-radius:4px;}
+.rexample::-webkit-scrollbar-thumb{background:var(--accent3);border-radius:4px;opacity:.6;}
+.rexample::-webkit-scrollbar-thumb:hover{background:var(--ok);}
+
+/* mbody scrollbar */
+#mbody::-webkit-scrollbar{width:8px;}
+#mbody::-webkit-scrollbar-track{background:var(--surface3);border-radius:0 0 var(--r2) 0;}
+#mbody::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+#mbody::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+
+/* syntax colors in modal */
+.rsyntax .h-kw,.rexample .h-kw{color:var(--kw);font-weight:700;}
+.rsyntax .h-fn,.rexample .h-fn{color:var(--fn);}
+.rsyntax .h-str,.rexample .h-str{color:var(--str);}
+.rsyntax .h-num,.rexample .h-num{color:var(--num);}
+.rsyntax .h-cmt,.rexample .h-cmt{color:var(--comment);font-style:italic;}
+.rsyntax .h-op,.rexample .h-op{color:var(--op);}
+.rsyntax .h-bool,.rexample .h-bool{color:var(--bool);}
+
+/* editor highlight colors */
+.h-kw{color:var(--kw);font-weight:700;}.h-fn{color:var(--fn);}.h-str{color:var(--str);}
+.h-num{color:var(--num);}.h-cmt{color:var(--comment);font-style:italic;}.h-op{color:var(--op);}.h-bool{color:var(--bool);}
+
+/* ── SOBRE MODAL ── */
+#sobre-overlay{display:none;position:fixed;inset:0;background:rgba(30,35,80,.32);backdrop-filter:blur(4px);z-index:2000;align-items:center;justify-content:center;}
+#sobre-overlay.open{display:flex;}
+#sobre-box{background:var(--surface);border-radius:var(--r2);box-shadow:var(--sh2);padding:40px 48px;display:flex;flex-direction:column;align-items:center;gap:18px;max-width:420px;width:90%;animation:mi .22s cubic-bezier(.22,1,.36,1);}
+#sobre-icon{width:52px;height:52px;background:var(--accent);border-radius:14px;display:flex;align-items:center;justify-content:center;}
+#sobre-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;color:var(--text);letter-spacing:-.5px;}
+#sobre-sub{font-size:.78rem;color:var(--text-mid);text-align:center;line-height:1.6;}
+#sobre-author{font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;color:var(--accent);text-align:center;border-top:1.5px solid var(--border);padding-top:16px;width:100%;}
+#sobre-close-btn{margin-top:4px;padding:8px 28px;background:var(--surface3);border:1.5px solid var(--border);border-radius:var(--r);font-family:'JetBrains Mono',monospace;font-size:.76rem;font-weight:600;color:var(--text-mid);cursor:pointer;transition:all .13s;}
+#sobre-close-btn:hover{background:var(--border);color:var(--text);}
+.btn-sobre{background:transparent;color:var(--text-mid);border:1.5px solid var(--border);}
+.btn-sobre:hover{border-color:var(--text-mid);color:var(--text);background:var(--surface3);}
+
+/* ── ARQUIVO MENU ── */
+.menu-wrap{position:relative;}
+.btn-menu{background:transparent;color:var(--text-mid);border:1.5px solid var(--border);}
+.btn-menu:hover,.btn-menu.open{border-color:var(--accent);color:var(--accent);background:var(--accent-lt);}
+#arquivo-menu{display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);box-shadow:var(--sh2);min-width:170px;z-index:500;overflow:hidden;animation:fu .12s ease;}
+#arquivo-menu.open{display:block;}
+.menu-item{display:flex;align-items:center;gap:10px;padding:9px 16px;font-family:'JetBrains Mono',monospace;font-size:.76rem;font-weight:600;color:var(--text-mid);cursor:pointer;transition:background .1s,color .1s;border:none;background:transparent;width:100%;text-align:left;}
+.menu-item:hover{background:var(--surface3);color:var(--text);}
+.menu-item svg{flex-shrink:0;opacity:.7;}
+.menu-divider{height:1px;background:var(--border);margin:4px 0;}
+.menu-item.danger{color:var(--err);}
+.menu-item.danger:hover{background:#2a0e0e;color:var(--err);}
+body.dark .menu-item.danger:hover{background:#2a0e0e;}
+
+/* ── THEME BUTTON ── */
+.btn-theme{background:transparent;color:var(--text-mid);border:1.5px solid var(--border);padding:7px 10px;}
+.btn-theme:hover{border-color:var(--text-mid);color:var(--text);background:var(--surface3);}
+
+/* global scrollbar */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    PyBR <span class="logo-badge">IDE</span>
+  </div>
+  <div class="vdiv"></div>
+  <!-- Menu Arquivo -->
+  <div class="menu-wrap" id="menu-wrap">
+    <button class="btn btn-menu" id="btn-arquivo" onclick="toggleMenu()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Arquivo
+    </button>
+    <div id="arquivo-menu">
+      <button class="menu-item" onclick="menuAbrir()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+        Abrir…
+      </button>
+      <div class="menu-divider"></div>
+      <button class="menu-item" onclick="menuSalvar()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Salvar
+      </button>
+      <button class="menu-item" onclick="menuSalvarComo()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/><line x1="12" y1="17" x2="12" y2="11"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+        Salvar como…
+      </button>
+      <div class="menu-divider"></div>
+      <button class="menu-item danger" onclick="menuEncerrar()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        Encerrar
+      </button>
+    </div>
+  </div>
+  <div class="vdiv"></div>
+  <button class="btn btn-ex" onclick="loadExample('basico')">Básico</button>
+  <button class="btn btn-ex" onclick="loadExample('loop')">Laços</button>
+  <button class="btn btn-ex" onclick="loadExample('funcao')">Funções</button>
+  <button class="btn btn-ex" onclick="loadExample('lista')">Listas</button>
+  <div class="sep"></div>
+  <button class="btn btn-ref" onclick="openModal()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+    Referência da Linguagem
+  </button>
+  <div class="vdiv"></div>
+  <button class="btn btn-sobre" onclick="openSobre()">Sobre</button>
+  <!-- Botão alternar tema -->
+  <button class="btn btn-theme" id="btn-theme" onclick="toggleTheme()" title="Alternar modo escuro/claro">
+    <svg id="icon-dark" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    <svg id="icon-light" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
+</div>
+
+<!-- Input oculto para abrir arquivo -->
+<input type="file" id="file-input" accept=".pybr,.py,.txt" style="display:none" onchange="fileInputChange(event)">
+
+<!-- MAIN -->
+<div id="main">
+  <div id="editor-pane">
+    <div class="pane-head">
+      <span style="color:var(--accent3)">●</span>
+      <span class="tab-active">programa.pybr</span>
+      <span style="margin-left:auto;font-size:.68rem;opacity:.55;margin-right:10px">Ctrl+Enter</span>
+      <button class="btn btn-run" onclick="runCode()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>
+        Executar
+      </button>
+    </div>
+    <div id="editor-wrap">
+      <div id="line-numbers">1</div>
+      <div id="editor-inner">
+        <div id="hl"></div>
+        <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+      </div>
+    </div>
+  </div>
+  <div id="output-pane">
+    <div id="resizer" title="Arrastar para redimensionar"></div>
+    <div class="pane-head" style="justify-content:space-between">
+      <span>Saída</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="exec-time" style="font-size:.68rem;opacity:.55"></span>
+        <button class="btn btn-clear" onclick="clearOutput()">Limpar</button>
+      </div>
+    </div>
+    <div id="output"></div>
+    <div id="input-line">
+      <span>›</span>
+      <input id="input-box" type="text" placeholder="Digite e pressione Enter…">
+    </div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="statusbar">
+  <span id="smsg" class="s-ok">Pronto</span>
+  <div class="s-right">
+    <span id="cpos">Ln 1, Col 1</span>
+    <span>PyBR 1.0</span>
+    <span>UTF-8</span>
+  </div>
+</div>
+
+<!-- REFERENCE MODAL -->
+<div id="overlay" onclick="ovClick(event)">
+  <div id="modal">
+    <div id="modal-head">
+      <h2>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:8px"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        Referência da Linguagem PyBR
+      </h2>
+      <input id="msearch" type="text" placeholder="Buscar comando ou função…" oninput="filterRef(this.value)">
+      <button id="mclose" onclick="closeModal()">✕</button>
+    </div>
+    <div id="mcats"></div>
+    <div id="mbody"><div id="ref-empty">Nenhum resultado encontrado.</div></div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════
+   REFERENCE DATA
+══════════════════════════════════════════════════ */
+const REF = [
+  /* E/S */
+  { cmd:'escreva', cat:'Entrada/Saída', desc:'Exibe valores na saída do programa',
+    syntax:`escreva(valor)
+escreva(v1, v2, v3)
+escreva(f"Olá, {nome}!")`,
+    example:`escreva("Olá, mundo!")
+nome = "Maria"
+escreva("Bem-vinda,", nome)
+ano = 2025
+escreva(f"Estamos em {ano}")`, insert:'escreva("")' },
+
+  { cmd:'leia', cat:'Entrada/Saída', desc:'Lê um texto digitado pelo usuário',
+    syntax:`variavel = leia("mensagem: ")
+numero = inteiro(leia("valor: "))
+real = decimal(leia("valor: "))`,
+    example:`nome = leia("Qual o seu nome? ")
+escreva("Olá,", nome)
+
+idade = inteiro(leia("Quantos anos? "))
+escreva("Daqui a 10 anos:", idade + 10)`, insert:'leia("")' },
+
+  /* Condicionais */
+  { cmd:'se', cat:'Condicionais', desc:'Executa um bloco se a condição for verdadeira',
+    syntax:`se condição:
+    bloco_verdadeiro`,
+    example:`nota = 8.5
+se nota >= 7:
+    escreva("Aprovado!")`, insert:'se :\n    ' },
+
+  { cmd:'senão', cat:'Condicionais', desc:'Bloco alternativo executado quando o "se" é falso',
+    syntax:`se condição:
+    bloco_verdadeiro
+senão:
+    bloco_falso`,
+    example:`x = 7
+se x % 2 == 0:
+    escreva("par")
+senão:
+    escreva("ímpar")`, insert:'senão:\n    ' },
+
+  { cmd:'senão se', cat:'Condicionais', desc:'Testa outra condição quando a anterior é falsa',
+    syntax:`se cond1:
+    bloco1
+senão se cond2:
+    bloco2
+senão:
+    bloco_final`,
+    example:`hora = 15
+se hora < 12:
+    escreva("Bom dia!")
+senão se hora < 18:
+    escreva("Boa tarde!")
+senão:
+    escreva("Boa noite!")`, insert:'senão se :\n    ' },
+
+  /* Laços */
+  { cmd:'para', cat:'Laços', desc:'Itera sobre uma sequência de valores',
+    syntax:`para variavel em sequência:
+    bloco
+para i em intervalo(n):
+    bloco
+para item em lista:
+    bloco`,
+    example:`para i em intervalo(1, 6):
+    escreva(f"Passo {i}")
+
+cores = ["vermelho", "azul", "verde"]
+para cor em cores:
+    escreva(cor)`, insert:'para i em intervalo(10):\n    ' },
+
+  { cmd:'enquanto', cat:'Laços', desc:'Repete um bloco enquanto a condição for verdadeira',
+    syntax:`enquanto condição:
+    bloco`,
+    example:`contador = 1
+enquanto contador <= 5:
+    escreva(contador)
+    contador = contador + 1`, insert:'enquanto :\n    ' },
+
+  { cmd:'quebre', cat:'Laços', desc:'Interrompe o laço imediatamente',
+    syntax:`para/enquanto ...:
+    se condição:
+        quebre`,
+    example:`para n em intervalo(100):
+    se n == 5:
+        quebre
+    escreva(n)
+escreva("Parou!")`, insert:'quebre' },
+
+  { cmd:'continue', cat:'Laços', desc:'Pula para a próxima iteração do laço',
+    syntax:`para/enquanto ...:
+    se condição:
+        continue`,
+    example:`# Imprime só os ímpares
+para i em intervalo(10):
+    se i % 2 == 0:
+        continue
+    escreva(i)`, insert:'continue' },
+
+  /* Funções */
+  { cmd:'função', cat:'Funções', desc:'Define uma função reutilizável com nome e parâmetros',
+    syntax:`função nome(param1, param2):
+    bloco
+    retorne valor
+
+função nome(p1, p2):
+    bloco`,
+    example:`função saudar(nome, tipo):
+    se tipo == "formal":
+        retorne f"Bom dia, {nome}."
+    retorne f"Oi, {nome}!"
+
+escreva(saudar("Ana", "informal"))
+escreva(saudar("Carlos", "formal"))`, insert:'função nome():\n    ' },
+
+  { cmd:'retorne', cat:'Funções', desc:'Retorna um valor da função para quem chamou',
+    syntax:`retorne valor
+retorne         # retorna Nulo`,
+    example:`função quadrado(n):
+    retorne n * n
+
+função cubo(n):
+    retorne n * n * n
+
+escreva(quadrado(4))   # 16
+escreva(cubo(3))       # 27`, insert:'retorne ' },
+
+  /* Classes */
+  { cmd:'classe', cat:'Classes', desc:'Define um novo tipo de objeto com atributos e métodos',
+    syntax:`classe Nome:
+    função __init__(eu, param):
+        eu.atributo = param
+
+    função metodo(eu):
+        retorne eu.atributo`,
+    example:`classe Cachorro:
+    função __init__(eu, nome, raca):
+        eu.nome = nome
+        eu.raca = raca
+
+    função latir(eu):
+        escreva(f"{eu.nome} diz: Au au!")
+
+rex = Cachorro("Rex", "Labrador")
+rex.latir()
+escreva(rex.raca)`, insert:'classe Nome:\n    função __init__(eu):\n        ' },
+
+  /* Tratamento de Erros */
+  { cmd:'tente', cat:'Erros', desc:'Envolve código que pode lançar um erro',
+    syntax:`tente:
+    código_que_pode_falhar
+exceto:
+    código_se_falhar
+finalmente:
+    sempre_executa`,
+    example:`tente:
+    n = inteiro(leia("Digite um número: "))
+    escreva(f"O dobro é {n * 2}")
+exceto:
+    escreva("Isso não é um número válido!")
+finalmente:
+    escreva("Operação concluída.")`, insert:'tente:\n    \nexceto:\n    ' },
+
+  { cmd:'lance', cat:'Erros', desc:'Lança uma exceção manualmente',
+    syntax:`lance Exception("mensagem de erro")`,
+    example:`função dividir(a, b):
+    se b == 0:
+        lance Exception("Não pode dividir por zero!")
+    retorne a / b
+
+tente:
+    escreva(dividir(10, 0))
+exceto:
+    escreva("Erro capturado!")`, insert:'lance Exception("")' },
+
+  /* Lógica */
+  { cmd:'e', cat:'Lógica', desc:'E lógico — verdadeiro quando ambas as condições são verdadeiras',
+    syntax:`condição1 e condição2`,
+    example:`idade = 20
+tem_cnh = Verdadeiro
+se idade >= 18 e tem_cnh:
+    escreva("Pode dirigir!")
+senão:
+    escreva("Não pode dirigir.")`, insert:'e ' },
+
+  { cmd:'ou', cat:'Lógica', desc:'Ou lógico — verdadeiro quando ao menos uma condição é verdadeira',
+    syntax:`condição1 ou condição2`,
+    example:`dia = "sábado"
+se dia == "sábado" ou dia == "domingo":
+    escreva("Fim de semana!")
+senão:
+    escreva("Dia de semana.")`, insert:'ou ' },
+
+  { cmd:'não', cat:'Lógica', desc:'Negação lógica — inverte o valor booleano',
+    syntax:`não condição`,
+    example:`logado = Falso
+se não logado:
+    escreva("Faça o login primeiro.")`, insert:'não ' },
+
+  { cmd:'em', cat:'Lógica', desc:'Verifica se um valor pertence a uma coleção',
+    syntax:`valor em coleção
+valor não em coleção`,
+    example:`vogais = ["a", "e", "i", "o", "u"]
+letra = "e"
+se letra em vogais:
+    escreva(f"'{letra}' é vogal")
+
+se "z" não em vogais:
+    escreva("'z' não é vogal")`, insert:'em ' },
+
+  /* Valores */
+  { cmd:'Verdadeiro', cat:'Valores', desc:'Constante booleana verdadeira',
+    syntax:`var = Verdadeiro`,
+    example:`ativo = Verdadeiro
+logado = Verdadeiro
+se ativo e logado:
+    escreva("Bem-vindo!")`, insert:'Verdadeiro' },
+
+  { cmd:'Falso', cat:'Valores', desc:'Constante booleana falsa',
+    syntax:`var = Falso`,
+    example:`conectado = Falso
+se não conectado:
+    escreva("Você está offline.")`, insert:'Falso' },
+
+  { cmd:'Nulo', cat:'Valores', desc:'Representa a ausência de valor',
+    syntax:`var = Nulo
+se var é Nulo:
+    ...`,
+    example:`resultado = Nulo
+se resultado é Nulo:
+    escreva("Ainda sem resultado.")
+resultado = 42
+escreva(resultado)`, insert:'Nulo' },
+
+  /* Funções Nativas */
+  { cmd:'intervalo', cat:'Funções Nativas', desc:'Gera uma sequência de números inteiros',
+    syntax:`intervalo(fim)
+intervalo(inicio, fim)
+intervalo(inicio, fim, passo)`,
+    example:`# 0 até 4
+para i em intervalo(5):
+    escreva(i)
+
+# 1 até 10 de 2 em 2
+para i em intervalo(1, 11, 2):
+    escreva(i)
+
+# contagem regressiva
+para i em intervalo(5, 0, -1):
+    escreva(i)`, insert:'intervalo(10)' },
+
+  { cmd:'comprimento', cat:'Funções Nativas', desc:'Retorna o tamanho de uma coleção ou texto',
+    syntax:`comprimento(coleção)
+comprimento(texto)`,
+    example:`frutas = ["maçã", "banana", "uva"]
+escreva(comprimento(frutas))   # 3
+
+palavra = "Python"
+escreva(comprimento(palavra))  # 6
+
+info = {"nome": "Ana", "idade": 20}
+escreva(comprimento(info))     # 2`, insert:'comprimento()' },
+
+  { cmd:'tipo', cat:'Funções Nativas', desc:'Retorna o tipo de dado de um valor',
+    syntax:`tipo(valor)`,
+    example:`escreva(tipo(42))          # int
+escreva(tipo(3.14))        # float
+escreva(tipo("olá"))       # str
+escreva(tipo([1, 2, 3]))   # list
+escreva(tipo(Verdadeiro))  # bool
+escreva(tipo(Nulo))        # NoneType`, insert:'tipo()' },
+
+  { cmd:'inteiro', cat:'Funções Nativas', desc:'Converte um valor para número inteiro',
+    syntax:`inteiro(valor)`,
+    example:`x = inteiro("42")
+escreva(x + 8)     # 50
+
+y = inteiro(3.99)
+escreva(y)         # 3
+
+z = inteiro(leia("Número: "))`, insert:'inteiro()' },
+
+  { cmd:'decimal', cat:'Funções Nativas', desc:'Converte um valor para número com casas decimais',
+    syntax:`decimal(valor)`,
+    example:`x = decimal("3.14")
+escreva(x * 2)    # 6.28
+
+preco = decimal(leia("Preço: "))
+escreva(f"Com desconto: {preco * 0.9:.2f}")`, insert:'decimal()' },
+
+  { cmd:'texto', cat:'Funções Nativas', desc:'Converte um valor para texto (string)',
+    syntax:`texto(valor)`,
+    example:`n = 2025
+s = texto(n)
+escreva("Ano " + s)     # Ano 2025
+
+pi = 3.14159
+escreva(texto(pi))      # 3.14159`, insert:'texto()' },
+
+  { cmd:'lista', cat:'Funções Nativas', desc:'Cria uma lista ou converte um iterável em lista',
+    syntax:`lista()
+lista(iterável)
+
+# Métodos da lista:
+lst.adicionar(x)       # adiciona x ao final
+lst.inserir(i, x)      # insere x na posição i
+lst.remover(x)         # remove 1ª ocorrência de x
+lst.retirar()          # remove e retorna o último
+lst.retirar(i)         # remove e retorna o item na posição i
+lst.estender(outra)    # concatena outra lista
+lst.ordenar()          # ordena a lista no lugar
+lst.inverter()         # inverte a lista no lugar
+lst.copiar()           # retorna uma cópia rasa
+lst.limpar()           # remove todos os elementos
+lst.indice(x)          # posição da 1ª ocorrência de x
+lst.contar(x)          # quantidade de ocorrências de x
+lst.contem(x)          # Verdadeiro se x está na lista
+lst.fatiar(i, j)       # retorna sublista [i:j]
+lst.juntar(sep)        # une elementos com separador
+lst.primeiro()         # retorna o primeiro elemento
+lst.ultimo()           # retorna o último elemento`,
+    example:`frutas = ["maçã", "banana", "uva"]
+
+# adicionar / inserir
+frutas.adicionar("manga")
+frutas.inserir(1, "kiwi")
+escreva(frutas)
+
+# remover / retirar
+frutas.remover("banana")
+ultimo = frutas.retirar()
+escreva(f"Retirado: {ultimo}")
+escreva(frutas)
+
+# ordenar / inverter / copiar
+nums = [5, 2, 8, 1, 9, 3]
+nums.ordenar()
+escreva(nums)
+nums.inverter()
+escreva(nums)
+copia = nums.copiar()
+copia.adicionar(99)
+escreva(f"Original: {nums}  Cópia: {copia}")
+
+# contar / índice / contem
+letras = ["a", "b", "a", "c", "a"]
+escreva(letras.contar("a"))
+escreva(letras.indice("b"))
+escreva(letras.contem("z"))
+
+# estender / limpar
+a = [1, 2, 3]
+b = [4, 5, 6]
+a.estender(b)
+escreva(a)
+a.limpar()
+escreva(a)
+
+# juntar / fatiar
+palavras = ["Python", "em", "Português"]
+escreva(palavras.juntar(" "))
+escreva(palavras.fatiar(0, 2))`, insert:'lista()' },
+
+  { cmd:'dicionário', cat:'Funções Nativas', desc:'Estrutura de dados chave-valor (mapa)',
+    syntax:`d = {"chave": valor}
+d["nova_chave"] = novo_valor
+valor = d["chave"]
+chaves = d.keys()`,
+    example:`pessoa = {"nome": "Ana", "idade": 30}
+escreva(pessoa["nome"])        # Ana
+
+pessoa["cidade"] = "São Paulo"
+para campo em pessoa:
+    escreva(f"{campo}: {pessoa[campo]}")`, insert:'{"chave": valor}' },
+
+  { cmd:'conjunto', cat:'Funções Nativas', desc:'Coleção sem elementos duplicados',
+    syntax:`conjunto(iterável)`,
+    example:`nums = [1, 2, 2, 3, 3, 3, 4]
+unicos = conjunto(nums)
+escreva(unicos)   # {1, 2, 3, 4}
+
+letras = conjunto("banana")
+escreva(letras)   # {'b', 'a', 'n'}`, insert:'conjunto()' },
+
+  { cmd:'ordenar', cat:'Funções Nativas', desc:'Retorna uma cópia ordenada de uma coleção',
+    syntax:`ordenar(coleção)`,
+    example:`notas = [7.5, 9.0, 6.2, 8.8, 5.5]
+escreva(ordenar(notas))
+
+nomes = ["Carlos", "Ana", "Bruno", "Diana"]
+escreva(ordenar(nomes))`, insert:'ordenar()' },
+
+  { cmd:'máximo', cat:'Funções Nativas', desc:'Retorna o maior valor de uma coleção',
+    syntax:`máximo(coleção)`,
+    example:`notas = [6, 9, 7, 10, 8]
+escreva(máximo(notas))   # 10
+
+palavras = ["banana", "abacaxi", "uva"]
+escreva(máximo(palavras))   # uva`, insert:'máximo()' },
+
+  { cmd:'mínimo', cat:'Funções Nativas', desc:'Retorna o menor valor de uma coleção',
+    syntax:`mínimo(coleção)`,
+    example:`temps = [18, 22, 15, 30, 11, 25]
+escreva(mínimo(temps))   # 11`, insert:'mínimo()' },
+
+  { cmd:'soma', cat:'Funções Nativas', desc:'Soma todos os elementos numéricos de uma coleção',
+    syntax:`soma(coleção)`,
+    example:`valores = [10, 20, 30, 40, 50]
+escreva(soma(valores))   # 150
+
+media = soma(valores) / comprimento(valores)
+escreva(f"Média: {media}")   # 30.0`, insert:'soma()' },
+
+
+  { cmd:'seno / cosseno / tangente', cat:'Trigonometria', desc:'Funções trigonométricas (ângulo em radianos ou graus)',
+    syntax:`# Direto (ângulo em radianos)
+seno(angulo)
+cosseno(angulo)
+tangente(angulo)
+
+# Conversão de graus para radianos
+graus_para_rad(graus)
+rad_para_graus(radianos)
+
+# Via módulo matemática
+matemática.seno(angulo)
+matemática.arcoseno(valor)    # inversa
+matemática.arcocosseno(valor)
+matemática.arcotangente(valor)
+
+# Constante PI
+matemática.pi`,
+    example:`# Triângulo retângulo
+angulo = 30
+rad = graus_para_rad(angulo)
+escreva(f"seno(30°)    = {seno(rad):.4f}")
+escreva(f"cosseno(30°) = {cosseno(rad):.4f}")
+escreva(f"tangente(30°)= {tangente(rad):.4f}")
+
+# Identidade trigonométrica: seno²+cosseno²=1
+escreva(seno(rad)**2 + cosseno(rad)**2)
+
+# Usando PI
+escreva(f"PI = {matemática.pi:.6f}")
+escreva(f"seno(PI/2) = {seno(matemática.pi/2):.4f}")`, insert:`angulo = 30
+rad = graus_para_rad(angulo)
+escreva(f"seno(30°)    = {seno(rad):.4f}")
+escreva(f"cosseno(30°) = {cosseno(rad):.4f}")
+escreva(f"tangente(30°)= {tangente(rad):.4f}")
+escreva(f"Identidade:    {seno(rad)**2 + cosseno(rad)**2:.4f}")` },
+
+  { cmd:'arcoseno / arcocosseno / arcotangente', cat:'Trigonometria', desc:'Funções trigonométricas inversas — retornam ângulo em radianos',
+    syntax:`arcoseno(valor)       # -1 ≤ valor ≤ 1
+arcocosseno(valor)    # -1 ≤ valor ≤ 1
+arcotangente(valor)
+matemática.arcotangente2(y, x)  # ângulo do vetor (x,y)`,
+    example:`# Inversa: dado seno, achar o ângulo
+s = 0.5
+angulo_rad = arcoseno(s)
+angulo_grau = rad_para_graus(angulo_rad)
+escreva(f"arcoseno(0.5) = {angulo_grau:.1f}°")  # 30°
+
+# arcotangente2 — útil para vetores
+import matemática
+ang = matemática.arcotangente2(1, 1)
+escreva(f"ângulo (1,1) = {rad_para_graus(ang):.1f}°")  # 45°`, insert:`s = 0.5
+angulo_rad = arcoseno(s)
+escreva(f"arcoseno(0.5) = {rad_para_graus(angulo_rad):.1f}°")` },
+
+  { cmd:'raiz / matemática.sqrt', cat:'Trigonometria', desc:'Raiz quadrada e outras raízes',
+    syntax:`raiz(numero)
+matemática.raiz(numero)
+matemática.raiz_cubica(numero)`,
+    example:`escreva(raiz(16))          # 4.0
+escreva(raiz(2))           # 1.4142...
+escreva(matemática.raiz_cubica(27))  # 3.0
+
+# Hipotenusa (teorema de Pitágoras)
+a = 3
+b = 4
+hipotenusa = raiz(a**2 + b**2)
+escreva(f"Hipotenusa: {hipotenusa}")  # 5.0`, insert:`escreva(raiz(16))
+escreva(raiz(2))
+a, b = 3, 4
+escreva(f"Hipotenusa: {raiz(a**2 + b**2)}")` },
+
+  { cmd:'passe', cat:'Outros', desc:'Instrução vazia — marcador de posição para código futuro',
+    syntax:`função em_construcao():
+    passe`,
+    example:`função validar(x):
+    passe   # implementar depois
+
+se Verdadeiro:
+    passe`, insert:'passe' },
+
+  { cmd:'global', cat:'Outros', desc:'Acessa ou modifica uma variável do escopo global dentro de função',
+    syntax:`global nome_variavel`,
+    example:`contador = 0
+
+função incrementar():
+    global contador
+    contador = contador + 1
+
+incrementar()
+incrementar()
+escreva(contador)   # 2`, insert:'global ' },
+
+  { cmd:'afirmar', cat:'Outros', desc:'Verifica uma condição; lança erro se for falsa',
+    syntax:`afirmar condição`,
+    example:`x = 10
+afirmar x > 0     # ok, continua
+escreva("x é positivo")
+
+# afirmar x < 0  # isso lançaria um erro`, insert:'afirmar ' },
+];
+
+/* ══ KEYWORD MAP ══ */
+const KW_MAP = {
+  'escreva':'print','leia':'input','se':'if','senão se':'elif','senão':'else',
+  'enquanto':'while','para':'for','em':'in','intervalo':'range','função':'def',
+  'retorne':'return','classe':'class','importar':'import','de':'from',
+  'tente':'try','exceto':'except','finalmente':'finally','lance':'throw',
+  'passe':'pass','quebre':'break','continue':'continue','e':'and','ou':'or',
+  'não':'not','é':'is','Verdadeiro':'True','Falso':'False','Nulo':'None',
+  'comprimento':'len','tipo':'type','inteiro':'int','decimal':'float','texto':'str',
+  'lista':'list','dicionário':'dict','conjunto':'set','ordenar':'sorted',
+  'máximo':'max','mínimo':'min','soma':'sum','aleatório':'random',
+  'matemática':'math','global':'global','lambda':'lambda','com':'with',
+  'como':'as','apagar':'del','afirmar':'assert','gerar':'yield',
+};
+
+/* ══ EXAMPLES ══ */
+const EXAMPLES = {
+basico:`# Bem-vindo ao PyBR!
+nome = leia("Qual é o seu nome? ")
+escreva("Olá,", nome, "!")
+
+idade = inteiro(leia("Quantos anos você tem? "))
+se idade >= 18:
+    escreva("Você é maior de idade.")
+senão se idade >= 13:
+    escreva("Você é adolescente.")
+senão:
+    escreva("Você ainda é criança.")`,
+
+loop:`# Laços e repetições
+escreva("=== Tabuada do 7 ===")
+para i em intervalo(1, 11):
+    escreva(f"7 × {i} = {7 * i}")
+
+escreva("")
+escreva("=== Contagem regressiva ===")
+n = 5
+enquanto n > 0:
+    escreva(n)
+    n = n - 1
+escreva("Lançar! 🚀")`,
+
+funcao:`# Funções em PyBR
+função saudação(nome, tipo):
+    se tipo == "formal":
+        retorne f"Bom dia, Sr(a). {nome}."
+    retorne f"Oi, {nome}! Tudo bem?"
+
+função fatorial(n):
+    se n == 0 ou n == 1:
+        retorne 1
+    retorne n * fatorial(n - 1)
+
+função potencia(base, exp):
+    se exp == 0:
+        retorne 1
+    retorne base * potencia(base, exp - 1)
+
+escreva(saudação("Ana", "informal"))
+escreva(saudação("Carlos", "formal"))
+escreva("")
+escreva("=== Fatoriais ===")
+para i em intervalo(1, 9):
+    escreva(f"{i}! = {fatorial(i)}")
+escreva("")
+escreva("=== Potências de 2 ===")
+para i em intervalo(1, 9):
+    escreva(f"2^{i} = {potencia(2, i)}")`,
+
+lista:`# Listas e dicionários
+frutas = ["maçã", "banana", "laranja", "uva"]
+escreva("Frutas:", frutas)
+escreva("Total:", comprimento(frutas))
+escreva("Ordenadas:", ordenar(frutas))
+
+escreva("")
+turma = {"Ana": 9.5, "Bruno": 7.2, "Carla": 8.8}
+escreva("=== Notas da turma ===")
+para aluno em turma:
+    nota = turma[aluno]
+    se nota >= 9:
+        conceito = "A"
+    senão se nota >= 7:
+        conceito = "B"
+    senão:
+        conceito = "C"
+    escreva(f"{aluno}: {nota} → Conceito {conceito}")
+
+notas = lista(turma.values())
+escreva(f"Maior: {máximo(notas)}  Menor: {mínimo(notas)}")`,
+};
+
+/* ══════════════════════════════════════════════════
+   MODAL
+══════════════════════════════════════════════════ */
+const ALL_CATS = ['Todos', ...new Set(REF.map(r=>r.cat))];
+let AF = { cat:'Todos', q:'' };
+
+function buildModal() {
+  const cc = document.getElementById('mcats');
+  ALL_CATS.forEach(cat => {
+    const b = document.createElement('button');
+    b.className = 'cat' + (cat==='Todos'?' active':'');
+    b.textContent = cat;
+    b.onclick = () => {
+      document.querySelectorAll('.cat').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      AF.cat = cat;
+      renderCards();
+    };
+    cc.appendChild(b);
+  });
+  renderCards();
+}
+
+function renderCards() {
+  const body = document.getElementById('mbody');
+  const empty = document.getElementById('ref-empty');
+  body.querySelectorAll('.rcard').forEach(c=>c.remove());
+  const q = AF.q.toLowerCase();
+  const items = REF.filter(r => {
+    const mc = AF.cat==='Todos' || r.cat===AF.cat;
+    const mq = !q || r.cmd.toLowerCase().includes(q) || r.desc.toLowerCase().includes(q) || r.cat.toLowerCase().includes(q);
+    return mc && mq;
+  });
+  empty.style.display = items.length===0 ? 'block' : 'none';
+  items.forEach(r => body.appendChild(makeCard(r)));
+}
+
+function makeCard(r) {
+  const card = document.createElement('div');
+  card.className = 'rcard';
+
+  const head = document.createElement('div');
+  head.className = 'rcard-head';
+  head.innerHTML = `<span class="rcmd">${esc(r.cmd)}</span><span class="rdesc">${esc(r.desc)}</span><span class="rtag">${esc(r.cat)}</span><span class="rchev">▶</span>`;
+  head.onclick = () => { card.classList.toggle('open'); };
+
+  const body = document.createElement('div');
+  body.className = 'rbody';
+  body.innerHTML = `
+    <div><div class="rlabel">Sintaxe</div><div class="rsyntax">${hlCode(r.syntax)}</div></div>
+    <div><div class="rlabel">Exemplo</div><div class="rexample">${hlCode(r.example)}</div></div>`;
+
+  const btn = document.createElement('button');
+  btn.className = 'rtry';
+  btn.innerHTML = '▶ Abrir exemplo no editor';
+  btn.onclick = () => {
+    editor.value = r.example;
+    updateHL();
+    closeModal();
+    editor.focus();
+  };
+  body.appendChild(btn);
+
+  card.appendChild(head);
+  card.appendChild(body);
+  return card;
+}
+
+function filterRef(q) { AF.q=q; renderCards(); }
+function openModal()  { document.getElementById('overlay').classList.add('open'); document.getElementById('msearch').focus(); }
+function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+function ovClick(e)   { if(e.target===document.getElementById('overlay')) closeModal(); }
+document.addEventListener('keydown', e => { if(e.key==='Escape'){closeModal();closeSobre();} });
+
+/* ══════════════════════════════════════════════════
+   SYNTAX HIGHLIGHT
+══════════════════════════════════════════════════ */
+const KWS = Object.keys(KW_MAP).sort((a,b)=>b.length-a.length);
+const BOOLS = ['Verdadeiro','Falso','Nulo'];
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function hlCode(code) { return code.split('\n').map(hlLine).join('\n'); }
+
+function hlLine(line) {
+  const ci = findCmt(line);
+  let code=line, cmt='';
+  if(ci!==-1){ cmt=line.slice(ci); code=line.slice(0,ci); }
+  return tokenize(code)+(cmt?`<span class="h-cmt">${esc(cmt)}</span>`:'');
+}
+
+function findCmt(line) {
+  let inS=false,sc='';
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(!inS&&(c==='"'||c==="'")){ inS=true;sc=c; }
+    else if(inS&&c===sc&&line[i-1]!=='\\'){ inS=false; }
+    else if(!inS&&c==='#') return i;
+  }
+  return -1;
+}
+
+function tokenize(code) {
+  let out='',i=0;
+  while(i<code.length){
+    if((code[i]==='f'||code[i]==='F')&&(code[i+1]==='"'||code[i+1]==="'")){
+      const q=code[i+1];let j=i+2;
+      while(j<code.length&&code[j]!==q){if(code[j]==='\\')j++;j++;}j++;
+      out+=`<span class="h-str">${esc(code.slice(i,j))}</span>`;i=j;continue;
+    }
+    if(code[i]==='"'||code[i]==="'"){
+      const q=code[i];let j=i+1;
+      while(j<code.length&&code[j]!==q){if(code[j]==='\\')j++;j++;}j++;
+      out+=`<span class="h-str">${esc(code.slice(i,j))}</span>`;i=j;continue;
+    }
+    if(/\d/.test(code[i])&&(i===0||/\W/.test(code[i-1]))){
+      let j=i;while(j<code.length&&/[\d.]/.test(code[j]))j++;
+      out+=`<span class="h-num">${esc(code.slice(i,j))}</span>`;i=j;continue;
+    }
+    if(/[a-zA-ZÀ-ÿ_]/.test(code[i])){
+      let j=i;while(j<code.length&&/[a-zA-ZÀ-ÿ_0-9]/.test(code[j]))j++;
+      const w=code.slice(i,j);
+      if(BOOLS.includes(w)) out+=`<span class="h-bool">${esc(w)}</span>`;
+      else if(KWS.some(k=>k===w)) out+=`<span class="h-kw">${esc(w)}</span>`;
+      else if(code[j]==='(') out+=`<span class="h-fn">${esc(w)}</span>`;
+      else out+=esc(w);
+      i=j;continue;
+    }
+    if(/[+\-*/%=<>!&|^~]/.test(code[i])){ out+=`<span class="h-op">${esc(code[i])}</span>`;i++;continue; }
+    out+=esc(code[i]);i++;
+  }
+  return out;
+}
+
+/* ══════════════════════════════════════════════════
+   EDITOR
+══════════════════════════════════════════════════ */
+const editor  = document.getElementById('editor');
+const hlEl    = document.getElementById('hl');
+const lnEl    = document.getElementById('line-numbers');
+
+function updateHL() {
+  hlEl.innerHTML = hlCode(editor.value)+'\n';
+  const n = editor.value.split('\n').length;
+  lnEl.textContent = Array.from({length:n},(_,i)=>i+1).join('\n');
+}
+
+editor.addEventListener('input', updateHL);
+editor.addEventListener('scroll', () => {
+  hlEl.scrollTop=editor.scrollTop;
+  hlEl.scrollLeft=editor.scrollLeft;
+  lnEl.scrollTop=editor.scrollTop;
+});
+editor.addEventListener('keyup', updateCursor);
+editor.addEventListener('click', updateCursor);
+
+function updateCursor(){
+  const t=editor.value.slice(0,editor.selectionStart).split('\n');
+  document.getElementById('cpos').textContent=`Ln ${t.length}, Col ${t.at(-1).length+1}`;
+}
+
+editor.addEventListener('keydown', e => {
+  if(e.key==='Tab'){
+    e.preventDefault();
+    const s=editor.selectionStart,end=editor.selectionEnd;
+    editor.value=editor.value.slice(0,s)+'    '+editor.value.slice(end);
+    editor.selectionStart=editor.selectionEnd=s+4;
+    updateHL();
+  }
+  if(e.key==='Enter'){
+    e.preventDefault();
+    const s=editor.selectionStart;
+    const lines=editor.value.slice(0,s).split('\n');
+    const last=lines.at(-1);
+    const indent=last.match(/^(\s*)/)[1];
+    const extra=last.trimEnd().endsWith(':')?'    ':'';
+    const ins='\n'+indent+extra;
+    editor.value=editor.value.slice(0,s)+ins+editor.value.slice(editor.selectionEnd);
+    editor.selectionStart=editor.selectionEnd=s+ins.length;
+    updateHL();
+  }
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); runCode(); }
+});
+
+/* ══════════════════════════════════════════════════
+   TRANSPILER
+══════════════════════════════════════════════════ */
+function transpile(src) {
+  const kws = Object.keys(KW_MAP).sort((a,b)=>b.length-a.length);
+  return src.split('\n').map(line => {
+    let r='',i=0;
+    while(i<line.length){
+      if(line[i]==='#'){ break; }  // descarta comentário
+      if(line[i]==='"'||line[i]==="'"){
+        const q=line[i];r+=q;i++;
+        while(i<line.length&&line[i]!==q){if(line[i]==='\\'){r+=line[i];i++;}r+=line[i];i++;}
+        r+=(line[i]||'');i++;continue;
+      }
+      if((line[i]==='f'||line[i]==='F')&&i+1<line.length&&(line[i+1]==='"'||line[i+1]==="'")){
+        r+=line[i];i++;
+        const q=line[i];r+=q;i++;
+        while(i<line.length&&line[i]!==q){if(line[i]==='\\'){r+=line[i];i++;}r+=line[i];i++;}
+        r+=(line[i]||'');i++;continue;
+      }
+      let matched=false;
+      for(const kw of kws){
+        if(line.startsWith(kw,i)){
+          const after=line[i+kw.length];const before=i>0?line[i-1]:' ';
+          if((!after||/\W/.test(after))&&/\W/.test(before)&&before!=='.'){
+            r+=KW_MAP[kw];i+=kw.length;matched=true;break;
+          }
+        }
+      }
+      if(!matched){r+=line[i];i++;}
+    }
+    return r;
+  }).join('\n');
+}
+
+/* ══════════════════════════════════════════════════
+   INTERPRETER
+══════════════════════════════════════════════════ */
+const outputEl  = document.getElementById('output');
+const inputLine = document.getElementById('input-line');
+const inputBox  = document.getElementById('input-box');
+let inputResolvers=[];
+
+function addOutput(text,cls=''){
+  const d=document.createElement('div');d.className='ol '+cls;
+  d.innerHTML=`<span class="op">▶</span><span>${esc(String(text))}</span>`;
+  outputEl.appendChild(d);outputEl.scrollTop=outputEl.scrollHeight;
+}
+function clearOutput(){outputEl.innerHTML='';document.getElementById('exec-time').textContent='';setStatus('Pronto',true);}
+function setStatus(msg,ok=true){const el=document.getElementById('smsg');el.textContent=msg;el.className=ok?'s-ok':'s-err';}
+function waitForInput(prompt=''){
+  return new Promise(resolve=>{
+    if(prompt) addOutput(prompt,'sys');
+    inputLine.style.display='flex';inputBox.focus();
+    inputResolvers.push(resolve);
+  });
+}
+inputBox.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&inputResolvers.length>0){
+    const val=inputBox.value;inputBox.value='';
+    addOutput('› '+val,'');
+    inputResolvers.shift()(val);
+    if(inputResolvers.length===0)inputLine.style.display='none';
+  }
+});
+
+async function runCode(){
+  const src=editor.value.trim();
+  if(!src){addOutput('Nenhum código para executar.','sys');return;}
+  clearOutput();inputResolvers=[];inputLine.style.display='none';
+  const t0=performance.now();setStatus('Executando…',true);
+  const python=transpile(src);
+  addOutput('── Iniciando execução ──','sys');
+  try{
+    await interpret(python);
+    const ms=(performance.now()-t0).toFixed(1);
+    document.getElementById('exec-time').textContent=`${ms}ms`;
+    addOutput(`── Concluído em ${ms}ms ──`,'sys');
+    setStatus('Execução concluída',true);
+  }catch(e){
+    addOutput('ERRO: '+e.message,'err');
+    setStatus('Erro na execução',false);
+  }
+}
+
+/* ── Micro-interpreter ── */
+function createEnv(parent=null){
+  const store={};
+  const globals={}; // varName -> root env reference
+  return{
+    parent,
+    get(k){if(k in store)return store[k];if(this.parent)return this.parent.get(k);throw new ReferenceError(`'${k}' não está definido`);},
+    set(k,v){if(globals[k])globals[k].set(k,v);else store[k]=v;},
+    setGlobal(k,rootEnv){globals[k]=rootEnv;},
+    has(k){return k in store||(this.parent&&this.parent.has(k));},
+    dump(){return{...(this.parent?this.parent.dump():{}), ...store};}
+  };
+}
+const IND=l=>l.match(/^(\s*)/)[1].length;
+
+async function interpret(code){
+  const lines=code.split('\n'),env=createEnv();
+  env.set('_range',_range);env.set('_type',_type);env.set('_zip',_zip);
+  env.set('_print',async(...a)=>{addOutput(a.map(pyStr).join(' '));});
+  env.set('_input',async(p='')=>await waitForInput(String(p)));
+
+  // módulo matemática (acessível como matemática.seno(x) etc.)
+  const _mat = {
+    // constantes
+    pi: Math.PI, e: Math.E, tau: 2*Math.PI, inf: Infinity,
+    // trigonométricas (entrada em radianos)
+    seno:   Math.sin,  cosseno: Math.cos,  tangente: Math.tan,
+    sin:    Math.sin,  cos:     Math.cos,  tan:      Math.tan,
+    // trigonométricas inversas
+    arcoseno:    Math.asin, arcocosseno: Math.acos, arcotangente: Math.atan,
+    arcotangente2: Math.atan2,
+    asin: Math.asin, acos: Math.acos, atan: Math.atan, atan2: Math.atan2,
+    // hiperbólicas
+    senh: Math.sinh, cossenh: Math.cosh, tanh: Math.tanh,
+    sinh: Math.sinh, cosh:    Math.cosh,
+    // conversão
+    graus_para_rad: g => g * Math.PI / 180,
+    rad_para_graus: r => r * 180 / Math.PI,
+    // potência e raízes
+    sqrt: Math.sqrt,  raiz:   Math.sqrt,
+    pow:  Math.pow,   potencia: Math.pow,
+    raiz_cubica: x => Math.cbrt(x), cbrt: Math.cbrt,
+    // arredondamento
+    floor: Math.floor, ceil: Math.ceil, round: Math.round,
+    truncar: Math.trunc, trunc: Math.trunc,
+    // logaritmos
+    log: Math.log, log2: Math.log2, log10: Math.log10,
+    ln:  Math.log,
+    // valor absoluto
+    abs: Math.abs,
+    // fatorial e combinatória
+    fatorial: n => { let r=1; for(let i=2;i<=n;i++) r*=i; return r; },
+    // sinal
+    sinal: Math.sign, sign: Math.sign,
+    // hipot
+    hipotenusa: Math.hypot, hypot: Math.hypot,
+    // exp
+    exp: Math.exp,
+  };
+  env.set('matemática', _mat);
+  env.set('math', _mat);
+
+  // funções trig disponíveis diretamente (sem prefixo matemática.)
+  env.set('seno',        Math.sin);
+  env.set('cosseno',     Math.cos);
+  env.set('tangente',    Math.tan);
+  env.set('arcoseno',    Math.asin);
+  env.set('arcocosseno', Math.acos);
+  env.set('arcotangente',Math.atan);
+  env.set('graus_para_rad', g => g * Math.PI / 180);
+  env.set('rad_para_graus', r => r * 180 / Math.PI);
+  env.set('raiz',        Math.sqrt);
+  env.set('PI',          Math.PI);
+
+  // Funções nativas portuguesas registradas diretamente no env
+  // (necessário para uso dentro de f-strings e expressões avaliadas por evalS)
+  env.set('máximo',  arr => Math.max(...(Array.isArray(arr)?arr:[arr])));
+  env.set('mínimo',  arr => Math.min(...(Array.isArray(arr)?arr:[arr])));
+  env.set('soma',    arr => arr.reduce((a,v)=>a+v,0));
+  env.set('comprimento', v => typeof v==='string'||Array.isArray(v)?v.length:Object.keys(v).length);
+  env.set('ordenar', arr => [...arr].sort((a,b)=>a>b?1:a<b?-1:0));
+  env.set('lista',   v => v===undefined?[]:Array.from(v));
+  env.set('conjunto',v => [...new Set(Array.from(v))]);
+  env.set('inteiro', v => { const n=Math.trunc(Number(v)); if(isNaN(n)) throw new Error(`inteiro() valor inválido: '${v}'`); return n; });
+  env.set('decimal', v => { const n=Number(v); if(isNaN(n)) throw new Error(`decimal() valor inválido: '${v}'`); return n; });
+  env.set('texto',   v => String(v));
+  env.set('tipo',    _type);
+  env.set('intervalo', _range);
+  env.set('abs',     Math.abs);
+  env.set('arredondar', Math.round);
+  env.set('Math',    Math);
+
+  env.set('random',{random:Math.random,randint:(a,b)=>Math.floor(Math.random()*(b-a+1))+a,choice:arr=>arr[Math.floor(Math.random()*arr.length)],shuffle:arr=>{for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}});
+  await execBlock(lines,0,lines.length,env,0);
+}
+
+function _range(a,b,s=1){const r=[];if(b===undefined){b=a;a=0;}if(s>0)for(let i=a;i<b;i+=s)r.push(i);else for(let i=a;i>b;i+=s)r.push(i);return r;}
+function _type(v){if(v===null)return'NoneType';if(Array.isArray(v))return'list';if(typeof v==='boolean')return'bool';if(typeof v==='number')return Number.isInteger(v)?'int':'float';if(typeof v==='string')return'str';if(typeof v==='object')return'dict';if(typeof v==='function')return'function';return typeof v;}
+function _zip(...a){const l=Math.min(...a.map(x=>x.length));return Array.from({length:l},(_,i)=>a.map(x=>x[i]));}
+function pyStr(v){if(v===null)return'None';if(v===true)return'True';if(v===false)return'False';if(Array.isArray(v))return'['+v.map(pyStr).join(', ')+']';if(typeof v==='object')return'{'+Object.entries(v).map(([k,x])=>`'${k}': ${pyStr(x)}`).join(', ')+'}';return String(v);}
+
+async function execBlock(ls,s,e,env,bi){
+  let i=s;
+  while(i<e){
+    const l=ls[i],t=l.trim();
+    if(!t||t.startsWith('#')){i++;continue;}
+    const ind=IND(l);if(ind<bi)break;if(ind>bi){i++;continue;}
+    const be=findBE(ls,i+1,e,ind);
+    const r=await execSt(ls,i,be,e,env,bi);
+    if(r&&r.type)return r;
+    i=r&&r.next!==undefined?r.next:be;
+  }
+}
+function findBE(ls,s,e,bi){let j=s;while(j<e){const t=ls[j].trim();if(!t||t.startsWith('#')){j++;continue;}if(IND(ls[j])<=bi)break;j++;}return j;}
+
+async function execSt(ls,i,be,te,env,bi){
+  const raw=ls[i],l=raw.trim(),ind=IND(raw);
+  if(/^if\s+.+:$/.test(l)||/^elif\s+.+:$/.test(l))return await execIf(ls,i,te,env,ind);
+  if(/^else\s*:$/.test(l))return{next:be};
+  if(/^while\s+.+:$/.test(l))return await execWhile(ls,i,te,env,ind);
+  if(/^for\s+.+\s+in\s+.+:$/.test(l))return await execFor(ls,i,te,env,ind);
+  if(/^def\s+[a-zA-ZÀ-ÿ_][a-zA-ZÀ-ÿ_0-9]*\s*\(.*\)\s*:$/.test(l))return await execDef(ls,i,te,env,ind);
+  if(/^class\s+[a-zA-ZÀ-ÿ_]/.test(l))return await execClass(ls,i,te,env,ind);
+  if(/^try\s*:$/.test(l))return await execTry(ls,i,te,env,ind);
+  if(/^return(\s|$)/.test(l)){const ex=l.slice(6).trim();return{type:'return',value:ex?await evalAsync(ex,env):null,next:be};}
+  if(/^throw(\s|$)/.test(l)){const ex=l.slice(5).trim();throw new Error(ex?String(await evalAsync(ex,env)):'Erro lançado');}
+  if(l==='break')return{type:'break',next:be};
+  if(l==='continue')return{type:'continue',next:be};
+  if(/^global\s+/.test(l)){
+    const gnames=l.slice(6).trim().split(',').map(v=>v.trim());
+    gnames.forEach(gn=>{
+      // Mark variable as global in current env so set() writes to root
+      let root=env;while(root.parent)root=root.parent;
+      env.setGlobal(gn,root);
+    });
+    return{next:i+1};
+  }
+  if(l==='pass')return{next:i+1};
+  if(/^assert\s+/.test(l)){if(!evalS(l.slice(6).trim(),env))throw new Error('AssertionError');return{next:i+1};}
+  if(/^del\s+/.test(l))return{next:i+1};
+  await execES(l,env);
+  return{next:i+1};
+}
+
+async function execIf(ls,start,te,env,bi){
+  let i=start,done=false;
+  while(i<te){
+    const raw=ls[i],l=raw.trim();
+    if(IND(raw)<bi)break;
+    const be=findBE(ls,i+1,te,bi);
+    if(!done){
+      let c=true;
+      if(/^if\s+.+:$/.test(l))c=!!(await evalAsync(l.slice(3,-1).trim(),env));
+      else if(/^elif\s+.+:$/.test(l))c=!!(await evalAsync(l.slice(4,-1).trim(),env));
+      else if(/^else\s*:$/.test(l))c=true;
+      else break;
+      if(c){done=true;const r=await execBlock(ls,i+1,be,env,bi+4);if(r&&r.type)return{...r,next:be};}
+    }
+    i=be;
+    const nx=ls[i]?.trim();
+    if(!nx||(!nx.startsWith('elif')&&!nx.startsWith('else')))break;
+  }
+  return{next:i};
+}
+async function execWhile(ls,i,te,env,bi){
+  const c=ls[i].trim().slice(5,-1).trim();const be=findBE(ls,i+1,te,bi);
+  let it=0;
+  while(true){
+    if(++it>100000)throw new Error('Loop infinito (>100k iterações)');
+    if(!(await evalAsync(c,env)))break;
+    const r=await execBlock(ls,i+1,be,env,bi+4);
+    if(r&&r.type==='break')break;
+    if(r&&r.type==='return')return{...r,next:be};
+    await tick();
+  }
+  return{next:be};
+}
+async function execFor(ls,i,te,env,bi){
+  const l=ls[i].trim();const fb=l.slice(3,-1).trim();const ix=fb.indexOf(' in ');
+  const vp=fb.slice(0,ix).trim();const ie=fb.slice(ix+4).trim();
+  const be=findBE(ls,i+1,te,bi);
+  const iv=evalS(ie,env);
+  const it=Array.isArray(iv)?iv:typeof iv==='string'?[...iv]:typeof iv==='object'&&iv!==null?Object.keys(iv):(()=>{throw new Error('Não iterável');})();
+  for(const item of it){
+    if(vp.includes(','))vp.split(',').map(v=>v.trim()).forEach((v,j)=>env.set(v,Array.isArray(item)?item[j]:item));
+    else env.set(vp,item);
+    const r=await execBlock(ls,i+1,be,env,bi+4);
+    if(r&&r.type==='break')break;
+    if(r&&r.type==='return')return{...r,next:be};
+    await tick();
+  }
+  return{next:be};
+}
+async function execDef(ls,i,te,env,bi){
+  const m=ls[i].trim().match(/^def\s+([a-zA-ZÀ-ÿ_][a-zA-ZÀ-ÿ_0-9]*)\s*\((.*)\)\s*:$/);
+  const fn=m[1],ps=m[2].trim();const be=findBE(ls,i+1,te,bi);const bl=ls.slice(i+1,be);
+  // Parse parameter definitions (name and optional default)
+  const paramDefs=ps?ps.split(',').map(p=>{
+    p=p.trim();
+    if(p.includes('=')){const eq=p.indexOf('=');return{name:p.slice(0,eq).trim(),def:pvd(p.slice(eq+1).trim())};}
+    return{name:p,def:undefined};
+  }).filter(p=>p.name):[];
+
+  env.set(fn,async function(...args){
+    const fe=createEnv(env);
+    // Separate positional and named args
+    // Named args are passed as a special __kwargs__ object by the call site (see patchBt)
+    // For now: args may contain a trailing __kwargs__ plain object
+    let kwargs={};
+    if(args.length>0&&args[args.length-1]&&typeof args[args.length-1]==='object'&&args[args.length-1].__isKwargs){
+      kwargs=args.pop().__kwargs;
+    }
+    paramDefs.forEach((p,j)=>{
+      if(p.name in kwargs) fe.set(p.name,kwargs[p.name]);
+      else if(args[j]!==undefined) fe.set(p.name,args[j]);
+      else fe.set(p.name,p.def);
+    });
+    const r=await execBlock(bl,0,bl.length,fe,4);
+    return(r&&r.type==='return')?r.value:null;
+  });
+  return{next:be};
+}
+function pvd(s){if(s==='True')return true;if(s==='False')return false;if(s==='None')return null;if(!isNaN(s))return Number(s);if((s.startsWith('"')&&s.endsWith('"'))||(s.startsWith("'")&&s.endsWith("'")))return s.slice(1,-1);return s;}
+
+async function execClass(ls,i,te,env,bi){
+  const m=ls[i].trim().match(/^class\s+([a-zA-ZÀ-ÿ_][a-zA-ZÀ-ÿ_0-9]*)/);
+  const clsName=m[1];
+  const be=findBE(ls,i+1,te,bi);
+
+  // Collect method definitions directly (same indentation as class body = bi+4)
+  // Each method is a `def name(eu, ...):` block
+  const methodDefs={}; // name -> {paramDefs, lines}
+  let j=i+1;
+  while(j<be){
+    const raw=ls[j], t=raw.trim();
+    if(!t||t.startsWith('#')){j++;continue;}
+    if(IND(raw)===bi+4 && /^def\s+/.test(t)){
+      const dm=t.match(/^def\s+([a-zA-ZÀ-ÿ_][a-zA-ZÀ-ÿ_0-9]*)\s*\((.*)\)\s*:$/);
+      if(dm){
+        const mname=dm[1], ps=dm[2].trim();
+        const mbe=findBE(ls,j+1,be,bi+4);
+        const paramDefs=ps?ps.split(',').map(p=>{
+          p=p.trim();
+          if(p.includes('=')){const eq=p.indexOf('=');return{name:p.slice(0,eq).trim(),def:pvd(p.slice(eq+1).trim())};}
+          return{name:p,def:undefined};
+        }).filter(p=>p.name):[];
+        methodDefs[mname]={paramDefs, lines:ls.slice(j+1,mbe)};
+        j=mbe; continue;
+      }
+    }
+    j++;
+  }
+
+  // Build constructor
+  const ctor=async function(...args){
+    const instance=Object.create(null);
+    instance.__class__=clsName;
+
+    // Create a bound method caller: sets `eu` and runs the method body
+    async function callMethod(mname, thisObj, ...margs){
+      const mdef=methodDefs[mname];
+      if(!mdef) throw new Error(`Método '${mname}' não encontrado em '${clsName}'`);
+      const fe=createEnv(env);
+      // First param is always `eu` (self)
+      const [euParam,...restParams]=mdef.paramDefs;
+      if(euParam) fe.set(euParam.name, thisObj);
+      restParams.forEach((p,idx)=>{
+        let kwargs={};
+        if(margs.length>0 && margs[margs.length-1] && typeof margs[margs.length-1]==='object' && margs[margs.length-1].__isKwargs){
+          kwargs=margs[margs.length-1].__kwargs;
+        }
+        if(p.name in kwargs) fe.set(p.name,kwargs[p.name]);
+        else if(margs[idx]!==undefined) fe.set(p.name,margs[idx]);
+        else fe.set(p.name,p.def);
+      });
+      const r=await execBlock(mdef.lines,0,mdef.lines.length,fe,bi+8);
+      return(r&&r.type==='return')?r.value:null;
+    }
+
+    // Bind all methods to instance
+    for(const mname of Object.keys(methodDefs)){
+      instance[mname]=async(...margs)=>await callMethod(mname,instance,...margs);
+    }
+
+    // Call __init__
+    if(methodDefs['__init__']) await callMethod('__init__',instance,...args);
+    return instance;
+  };
+
+  env.set(clsName,ctor);
+  return{next:be};
+}
+async function execTry(ls,i,te,env,bi){
+  const be=findBE(ls,i+1,te,bi);let exS=be,exE=be,fnS=-1,fnE=-1;
+  let j=be;while(j<te){const t=ls[j]?.trim();if(!t){j++;continue;}if(IND(ls[j])<bi)break;if(/^except/.test(t)){exS=j;exE=findBE(ls,j+1,te,bi);j=exE;}else if(/^finally/.test(t)){fnS=j;fnE=findBE(ls,j+1,te,bi);j=fnE;}else break;}
+  try{await execBlock(ls,i+1,be,env,bi+4);}catch(e){if(exS<exE)await execBlock(ls,exS+1,exE,env,bi+4);}finally{if(fnS!==-1)await execBlock(ls,fnS+1,fnE,env,bi+4);}
+  return{next:Math.max(exE,fnE,be)};
+}
+
+function findEq(line){
+  let d=0,iS=false,sc='';
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(!iS&&(c==='"'||c==="'")){ iS=true;sc=c;continue; }
+    if(iS&&c===sc&&line[i-1]!=='\\'){iS=false;continue;}
+    if(iS)continue;
+    if('([{'.includes(c))d++;if(')]}'.includes(c))d--;
+    if(d===0&&c==='='&&line[i-1]!=='!'&&line[i-1]!=='<'&&line[i-1]!=='>'&&line[i-1]!=='='&&line[i+1]!=='=')return i;
+  }
+  return -1;
+}
+
+async function execES(line,env){
+  const am=line.match(/^(\w[\w.\[\]]*)\s*(\+=|-=|\*=|\/=|\/\/=|%=|\*\*=)\s*(.+)$/);
+  if(am){const[,t,op,r]=am;const cur=evalS(t,env),val=await evalAsync(r,env);const ops={'+=':( a,b)=>a+b,'-=':(a,b)=>a-b,'*=':(a,b)=>a*b,'/=':(a,b)=>a/b,'//=':(a,b)=>Math.floor(a/b),'%=':(a,b)=>a%b,'**=':(a,b)=>a**b};env.set(t,ops[op](cur,val));return;}
+  const eq=findEq(line);
+  if(eq!==-1){
+    const lhs=line.slice(0,eq).trim(),rhs=line.slice(eq+1).trim();
+    const val=await evalAsync(rhs,env);
+    if(lhs.includes(','))lhs.split(',').map(v=>v.trim()).forEach((v,j)=>env.set(v,Array.isArray(val)?val[j]:val));
+    else if(/\[/.test(lhs)){const m=lhs.match(/^(\w+)\[(.+)\]$/);if(m){const obj=env.get(m[1]);obj[evalS(m[2],env)]=val;}}
+    else if(/\./.test(lhs)){const parts=lhs.split('.');let obj=env.get(parts[0]);for(let pi=1;pi<parts.length-1;pi++)obj=obj[parts[pi]];obj[parts[parts.length-1]]=val;}
+    else env.set(lhs,val);
+    return;
+  }
+  await evalAsync(line,env);
+}
+
+// Avaliação assíncrona: resolve Promises retornadas por funções definidas pelo usuário
+async function evalAsync(expr,env){
+  expr=expr.trim();if(!expr)return null;
+  const ctx=env.dump();
+  if(!('Math' in ctx)) ctx['Math']=Math;
+  const vars=Object.keys(ctx),vals=vars.map(k=>ctx[k]);
+  let js=trExpr(expr,ctx);
+  // awaitUserCalls já foi aplicado dentro de trExpr via ctx
+  try{
+    const result=await new Function(...vars,`"use strict";return(async()=>(${js}))();`)(...vals);
+    return result;
+  }catch(e){
+    try{
+      const result=await new Function(...vars,`"use strict";return(async()=>{${js}})();`)(...vals);
+      return result;
+    }catch(e2){throw new Error(`Expressão inválida: "${expr}" → ${e.message}`);}
+  }
+}
+
+// Insere `await` antes de chamadas a funções que são async no env atual
+function awaitUserCalls(js, ctx) {
+  const asyncFns = new Set();
+  for(const [k,v] of Object.entries(ctx)){
+    if(typeof v === 'function' && v.constructor.name === 'AsyncFunction')
+      asyncFns.add(k);
+    // Para instâncias de classe: detecta métodos async nos objetos
+    if(v && typeof v === 'object' && !Array.isArray(v) && v.__class__){
+      for(const [mk,mv] of Object.entries(v)){
+        if(typeof mv === 'function' && mv.constructor.name === 'AsyncFunction')
+          asyncFns.add(`${k}\\.${mk}`);
+      }
+    }
+  }
+  // _print e _input são sempre async
+  asyncFns.add('_print'); asyncFns.add('_input');
+  for(const fn of asyncFns){
+    const re = new RegExp(`(?<!await\\s)\\b(${fn})\\s*\\(`, 'g');
+    js = js.replace(re, `await $1(`);
+  }
+  return js;
+}
+
+function evalS(expr,env){
+  expr=expr.trim();if(!expr)return null;
+  const ctx=env.dump();
+  if(!('Math' in ctx)) ctx['Math']=Math;
+  const vars=Object.keys(ctx),vals=vars.map(k=>ctx[k]);
+  let js=trExpr(expr);
+  try{return new Function(...vars,`"use strict";return(${js});`)(...vals);}
+  catch(e){try{return new Function(...vars,`"use strict";${js};`)(...vals);}catch(e2){throw new Error(`Expressão inválida: "${expr}" → ${e.message}`);}}
+}
+
+function trExpr(expr, ctx){
+  let js=expr;
+  // Remove comentários inline (#...) fora de strings
+  js=js.replace(/(["'`](?:[^"'`\\]|\\.)*["'`])|#.*/g, (m,str)=>str||'');
+  js=js.trim();
+  js=js.replace(/\bNone\b/g,'null');
+  js=js.replace(/\bTrue\b/g,'true');
+  js=js.replace(/\bFalse\b/g,'false');
+  // ** é suportado nativamente pelo JS — nenhuma transformação necessária
+  js=js.replace(/([^/])\/{2}([^/])/g,(m,a,b)=>`Math.floor(${a}/${b})`);
+  js=js.replace(/\bnot\s+/g,'!');
+  js=js.replace(/\band\b/g,'&&');
+  js=js.replace(/\bor\b/g,'||');
+  js=js.replace(/\bis\s+None\b/g,'===null');
+  js=js.replace(/\bis\s+not\s+None\b/g,'!==null');
+  js=js.replace(/\bis\b/g,'===');
+  js=js.replace(/(\S+)\s+not\s+in\s+(\S+)/g,'(!($2.includes!==undefined?$2.includes($1):Object.keys($2).includes(String($1))))');
+  js=js.replace(/(\S+)\s+in\s+(\S+)/g,'($2.includes!==undefined?$2.includes($1):Object.keys($2).includes(String($1)))');
+  // f-strings: converte em concatenação com await em cada interpolação
+  function convertFStr(inner) {
+    const parts = [];
+    let i = 0;
+    while (i < inner.length) {
+      if (inner[i] === '{') {
+        let depth = 1, j = i + 1;
+        while (j < inner.length && depth > 0) {
+          if (inner[j] === '{') depth++;
+          else if (inner[j] === '}') depth--;
+          j++;
+        }
+        const exprInside = inner.slice(i + 1, j - 1);
+        const fp = exprInside.match(/^(.+?):(\.\d+f)$/);
+        if (fp) {
+          let patched = patchBt(fp[1]);
+          if(ctx) patched = awaitUserCalls(patched, ctx);
+          parts.push(`(await(async()=>(${patched}))()).toFixed(${fp[2].slice(1,-1)})`);
+        } else {
+          let patched = patchBt(exprInside);
+          if(ctx) patched = awaitUserCalls(patched, ctx);
+          parts.push(`(await(async()=>(${patched}))()`+`)`);
+        }
+        i = j;
+      } else {
+        let text = '';
+        while (i < inner.length && inner[i] !== '{') { text += inner[i]; i++; }
+        if (text) parts.push(JSON.stringify(text));
+      }
+    }
+    return parts.length ? parts.join('+') : '""';
+  }
+  js=js.replace(/f"((?:[^"\\]|\\.)*)"/g,(m,inner)=>`(await(async()=>(${convertFStr(inner)}))())`);
+  js=js.replace(/f'((?:[^'\\]|\\.)*)'/g,(m,inner)=>`(await(async()=>(${convertFStr(inner)}))()`+`)`);
+  js=patchBt(js);
+  if(ctx) js=awaitUserCalls(js, ctx);
+  return js;
+}
+// Transforma argumentos nomeados em todas as chamadas de função, respeitando
+// parênteses e strings aninhados: fn(x, nome=val) -> fn(x, {__isKwargs:true,__kwargs:{nome:val}})
+function injectKwargs(js) {
+  function extractArgs(s, start) {
+    let depth=1, i=start, inStr=false, sc='';
+    while(i<s.length && depth>0) {
+      const c=s[i];
+      if(!inStr && (c==='"'||c==="'")) { inStr=true; sc=c; }
+      else if(inStr && c===sc && s[i-1]!=='\\') { inStr=false; }
+      else if(!inStr) {
+        if(c==='('||c==='['||c==='{') depth++;
+        else if(c===')'||c===']'||c==='}') depth--;
+      }
+      i++;
+    }
+    return s.slice(start, i-1);
+  }
+  function splitArgs(argsStr) {
+    const parts=[]; let cur='', depth=0, inStr=false, sc='';
+    for(let i=0;i<argsStr.length;i++) {
+      const c=argsStr[i];
+      if(!inStr && (c==='"'||c==="'")) { inStr=true; sc=c; cur+=c; }
+      else if(inStr && c===sc && argsStr[i-1]!=='\\') { inStr=false; cur+=c; }
+      else if(inStr) { cur+=c; }
+      else if(c==='('||c==='['||c==='{') { depth++; cur+=c; }
+      else if(c===')'||c===']'||c==='}') { depth--; cur+=c; }
+      else if(c===',' && depth===0) { parts.push(cur.trim()); cur=''; }
+      else { cur+=c; }
+    }
+    if(cur.trim()) parts.push(cur.trim());
+    return parts;
+  }
+  const fnRe = /\b([a-zA-ZÀ-ÿ_][a-zA-ZÀ-ÿ_0-9]*)\s*\(/g;
+  let result='', last=0, match;
+  while((match=fnRe.exec(js))!==null) {
+    const fname=match[1];
+    const argsStart=match.index+match[0].length;
+    const argsStr=extractArgs(js, argsStart);
+    const argsEnd=argsStart+argsStr.length+1;
+    if(!/[a-zA-ZÀ-ÿ_][a-zA-ZÀ-ÿ_0-9]*\s*=(?![=>])/.test(argsStr)) {
+      fnRe.lastIndex=argsEnd; continue;
+    }
+    const parts=splitArgs(argsStr);
+    const positional=[], kwargs=[];
+    for(const part of parts) {
+      const km=part.match(/^([a-zA-ZÀ-ÿ_][a-zA-ZÀ-ÿ_0-9]*)\s*=(?![=>])\s*([\s\S]+)$/);
+      if(km) kwargs.push(`${km[1]}:${km[2]}`);
+      else positional.push(part);
+    }
+    if(kwargs.length===0) { fnRe.lastIndex=argsEnd; continue; }
+    const kobj=`{__isKwargs:true,__kwargs:{${kwargs.join(',')}}}`;
+    const replacement=`${fname}(${[...positional,kobj].join(',')})`;
+    result+=js.slice(last, match.index)+replacement;
+    last=argsEnd;
+    fnRe.lastIndex=last;
+  }
+  result+=js.slice(last);
+  return result;
+}
+
+// Replaces fn(args) where args may contain nested parentheses
+function replaceCall(js, name, replacer) {
+  const re = new RegExp(`\\b${name}\\s*\\(`, 'g');
+  let result = '', last = 0, m;
+  while ((m = re.exec(js)) !== null) {
+    const start = m.index + m[0].length; // position after '('
+    let depth = 1, i = start;
+    while (i < js.length && depth > 0) {
+      if (js[i] === '(') depth++;
+      else if (js[i] === ')') depth--;
+      i++;
+    }
+    const inner = js.slice(start, i - 1); // content inside outermost parens
+    result += js.slice(last, m.index) + replacer(inner);
+    last = i;
+    re.lastIndex = i;
+  }
+  result += js.slice(last);
+  return result;
+}
+
+// Substitui obj.método(arg) respeitando parênteses e strings aninhados
+function replaceMethodCall(js, method, replacer) {
+  const re = new RegExp(`(\\w[\\w.\\[\\]]*)\\s*\\.\\s*${method}\\s*\\(`, 'g');
+  let result = '', last = 0, m;
+  while ((m = re.exec(js)) !== null) {
+    const obj = m[1];
+    const argStart = m.index + m[0].length;
+    let depth = 1, i = argStart, inStr = false, sc = '';
+    while (i < js.length && depth > 0) {
+      const c = js[i];
+      if (!inStr && (c === '"' || c === "'")) { inStr = true; sc = c; }
+      else if (inStr && c === sc && js[i-1] !== '\\') { inStr = false; }
+      else if (!inStr) {
+        if (c === '(' || c === '[' || c === '{') depth++;
+        else if (c === ')' || c === ']' || c === '}') depth--;
+      }
+      i++;
+    }
+    const arg = js.slice(argStart, i - 1);
+    result += js.slice(last, m.index) + replacer(obj, arg);
+    last = i;
+    re.lastIndex = i;
+  }
+  result += js.slice(last);
+  return result;
+}
+
+function patchBt(js){
+  js=js.replace(/\bprint\s*\(/g,'_print(');
+  js=js.replace(/\blen\s*\(([^)]+)\)/g,(m,a)=>`(typeof ${a}==='string'||Array.isArray(${a})?${a}.length:Object.keys(${a}).length)`);
+  js=js.replace(/\brange\s*\(([^)]+)\)/g,(m,a)=>`_range(${a})`);
+  js=js.replace(/\bint\s*\(([^)]+)\)/g,(m,a)=>`inteiro(${a})`);
+  js=js.replace(/\bfloat\s*\(([^)]+)\)/g,(m,a)=>`decimal(${a})`);
+  js=js.replace(/\bstr\s*\(([^)]+)\)/g,(m,a)=>`String(${a})`);
+  js=js.replace(/\btype\s*\(([^)]+)\)/g,(m,a)=>`_type(${a})`);
+  js=replaceCall(js,'list',(a)=>a?`Array.from(${a})`:'[]');
+  js=js.replace(/\bdict\s*\(\)/g,'{}');
+  js=js.replace(/\bset\s*\(([^)]*)\)/g,(m,a)=>a?`[...new Set(Array.from(${a}))]`:'[]');
+
+  // ── Métodos de lista em português ──────────────────────────────────────────
+  // .adicionar(x)  → .push(x)
+  js=js.replace(/\.adicionar\s*\(/g,'.push(');
+  // .acrescentar(x) → .push(x)  (alias)
+  js=js.replace(/\.acrescentar\s*\(/g,'.push(');
+  // .estender(iter) → push all items — IIFE para evitar variável temporária livre
+  js=js.replace(/(\w[\w.[\]]*)\s*\.\s*estender\s*\(([^)]+)\)/g,
+    '((_lst,_it)=>{const _a=Array.isArray(_it)?_it:Array.from(_it);_lst.push(..._a)})($1,$2)');
+  // .inserir(i, x)  → .splice(i, 0, x)
+  js=js.replace(/(\w[\w.[\]]*)\s*\.\s*inserir\s*\(([^,)]+),([^)]+)\)/g,'$1.splice($2,0,$3)');
+  // .remover(x)     → remove 1ª ocorrência — IIFE
+  js=js.replace(/(\w[\w.[\]]*)\s*\.\s*remover\s*\(([^)]+)\)/g,
+    '((_lst,_v)=>{const _i=_lst.indexOf(_v);if(_i!==-1)_lst.splice(_i,1);else throw new Error("remover(): valor não encontrado na lista")})($1,$2)');
+  // .retirar()      → .pop()
+  js=js.replace(/(\w[\w.[\]]*)\s*\.\s*retirar\s*\(\s*\)/g,'$1.pop()');
+  // .retirar(i)     → .splice(i,1)[0]
+  js=js.replace(/(\w[\w.[\]]*)\s*\.\s*retirar\s*\(([^)]+)\)/g,'$1.splice($2,1)[0]');
+  // .tirar() / .tirar(i) — alias de retirar
+  js=js.replace(/(\w[\w.[\]]*)\s*\.\s*tirar\s*\(\s*\)/g,'$1.pop()');
+  js=js.replace(/(\w[\w.[\]]*)\s*\.\s*tirar\s*\(([^)]+)\)/g,'$1.splice($2,1)[0]');
+  // .limpar()       → esvazia a lista no lugar
+  js=js.replace(/(\w[\w.[\]]*)\s*\.\s*limpar\s*\(\s*\)/g,'(()=>{$1.length=0})()');
+  // .indice(x) / .índice(x) → .indexOf(x) com erro se não encontrado
+  js=replaceMethodCall(js,'índice',(obj,arg)=>`((_lst,_v)=>{const _i=_lst.indexOf(_v);if(_i===-1)throw new Error("indice(): valor não encontrado");return _i})(${obj},${arg})`);
+  js=replaceMethodCall(js,'indice',(obj,arg)=>`((_lst,_v)=>{const _i=_lst.indexOf(_v);if(_i===-1)throw new Error("indice(): valor não encontrado");return _i})(${obj},${arg})`);
+  // .contar(x)      → conta ocorrências
+  js=replaceMethodCall(js,'contar',(obj,arg)=>`((_lst,_v)=>_lst.filter(_e=>_e===_v).length)(${obj},${arg})`);
+  // .ordenar()      → ordena no lugar
+  js=js.replace(/(\w[\w.[\]]*)\s*\.\s*ordenar\s*\(\s*\)/g,
+    '((_lst)=>_lst.sort((_a,_b)=>_a>_b?1:_a<_b?-1:0))($1)');
+  // .inverter()     → inverte no lugar
+  js=js.replace(/(\w[\w.[\]]*)\s*\.\s*inverter\s*\(\s*\)/g,'$1.reverse()');
+  // .copiar()       → cópia rasa
+  js=js.replace(/(\w[\w.[\]]*)\s*\.\s*copiar\s*\(\s*\)/g,'[...$1]');
+  // .contem(x)      → .includes(x)
+  js=replaceMethodCall(js,'contem',(obj,arg)=>`${obj}.includes(${arg})`);
+  // .primeiro()     → primeiro elemento
+  js=js.replace(/(\w[\w.[\]]*)\s*\.\s*primeiro\s*\(\s*\)/g,
+    '((_lst)=>_lst[0])($1)');
+  // .ultimo() / .último() → último elemento — IIFE para não avaliar $1 duas vezes
+  js=js.replace(/(\w[\w.[\]]*)\s*\.\s*último\s*\(\s*\)/g,
+    '((_lst)=>_lst[_lst.length-1])($1)');
+  js=js.replace(/(\w[\w.[\]]*)\s*\.\s*ultimo\s*\(\s*\)/g,
+    '((_lst)=>_lst[_lst.length-1])($1)');
+  // .fatiar(i,j) / .fatia(i,j) → .slice(i,j)
+  js=js.replace(/\.fatiar\s*\(/g,'.slice(');
+  js=js.replace(/\.fatia\s*\(/g,'.slice(');
+  // .juntar(sep) / .unir(sep) → .join(sep)
+  js=js.replace(/\.juntar\s*\(/g,'.join(');
+  js=js.replace(/\.unir\s*\(/g,'.join(');
+  // ── fim métodos de lista ───────────────────────────────────────────────────
+
+  // dict .values() / .keys() / .items() on plain objects
+  js=js.replace(/(\w[\w.]*)\s*\.\s*values\s*\(\s*\)/g,'Object.values($1)');
+  js=js.replace(/(\w[\w.]*)\s*\.\s*keys\s*\(\s*\)/g,'Object.keys($1)');
+  js=js.replace(/(\w[\w.]*)\s*\.\s*items\s*\(\s*\)/g,'Object.entries($1)');
+  js=js.replace(/\bsorted\s*\(([^)]+)\)/g,(m,a)=>`[...${a}].sort((a,b)=>a>b?1:a<b?-1:0)`);
+  js=js.replace(/\breversed\s*\(([^)]+)\)/g,(m,a)=>`[...${a}].reverse()`);
+  js=replaceCall(js,'max',(a)=>`Math.max(...(Array.isArray(${a})?${a}:[${a}]))`);
+  js=replaceCall(js,'min',(a)=>`Math.min(...(Array.isArray(${a})?${a}:[${a}]))`);
+  js=js.replace(/\bsum\s*\(([^)]+)\)/g,(m,a)=>`(${a}).reduce((acc,v)=>acc+v,0)`);
+  js=js.replace(/\babs\s*\(([^)]+)\)/g,(m,a)=>`Math.abs(${a})`);
+  js=js.replace(/\bround\s*\(([^)]+)\)/g,(m,a)=>`Math.round(${a})`);
+  js=js.replace(/\benumerate\s*\(([^)]+)\)/g,(m,a)=>`Array.from(${a}).map((v,i)=>[i,v])`);
+  js=js.replace(/\bzip\s*\(([^)]+)\)/g,(m,a)=>`_zip(${a})`);
+  js=js.replace(/(?<!\.)(?<![a-zA-ZÀ-ÿ_0-9])\bmap\s*\(([^,]+),([^)]+)\)/g,(m,fn,it)=>`Array.from(${it}).map(${fn})`);
+  js=js.replace(/(?<!\.)(?<![a-zA-ZÀ-ÿ_0-9])\bfilter\s*\(([^,]+),([^)]+)\)/g,(m,fn,it)=>`Array.from(${it}).filter(${fn})`);
+  js=js.replace(/\binput\s*\(([^)]*)\)/g,(m,a)=>`_input(${a||'""'})`);
+  // Transforma argumentos nomeados: fn(x, nome=val) -> fn(x, {__isKwargs:true,__kwargs:{nome:val}})
+  js=injectKwargs(js);
+  return js;
+}
+function tick(){return new Promise(r=>setTimeout(r,0));}
+
+/* ══ INIT ══ */
+function loadExample(k){editor.value=EXAMPLES[k]||'';updateHL();editor.focus();localStorage.setItem('pybr-code',editor.value);}
+
+function openSobre(){document.getElementById('sobre-overlay').classList.add('open');}
+function closeSobre(){document.getElementById('sobre-overlay').classList.remove('open');}
+
+/* ══ TEMA ══ */
+function toggleTheme(){
+  const dark=document.body.classList.toggle('dark');
+  document.getElementById('icon-dark').style.display = dark?'none':'block';
+  document.getElementById('icon-light').style.display = dark?'block':'none';
+  localStorage.setItem('pybr-theme', dark?'dark':'light');
+}
+(function initTheme(){
+  if(localStorage.getItem('pybr-theme')==='dark'){
+    document.body.classList.add('dark');
+    document.getElementById('icon-dark').style.display='none';
+    document.getElementById('icon-light').style.display='block';
+  }
+})();
+
+/* ══ MENU ARQUIVO ══ */
+let currentFileName = 'programa.pybr';
+
+function toggleMenu(){
+  const menu=document.getElementById('arquivo-menu');
+  const btn=document.getElementById('btn-arquivo');
+  const isOpen=menu.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+  if(isOpen){
+    // Fecha ao clicar fora
+    setTimeout(()=>document.addEventListener('click', closeMenuOutside, {once:true}), 0);
+  }
+}
+function closeMenuOutside(e){
+  if(!document.getElementById('menu-wrap').contains(e.target)){
+    document.getElementById('arquivo-menu').classList.remove('open');
+    document.getElementById('btn-arquivo').classList.remove('open');
+  }
+}
+function closeMenu(){
+  document.getElementById('arquivo-menu').classList.remove('open');
+  document.getElementById('btn-arquivo').classList.remove('open');
+}
+
+function menuAbrir(){
+  closeMenu();
+  document.getElementById('file-input').click();
+}
+function fileInputChange(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    editor.value=ev.target.result;
+    currentFileName=file.name;
+    document.querySelector('.tab-active').textContent=currentFileName;
+    updateHL();
+    editor.focus();
+    localStorage.setItem('pybr-code', editor.value);
+    localStorage.setItem('pybr-filename', currentFileName);
+    setStatus('Arquivo aberto: '+currentFileName, true);
+  };
+  reader.readAsText(file);
+  e.target.value=''; // permite reabrir o mesmo arquivo
+}
+
+function menuSalvar(){
+  closeMenu();
+  doSave(currentFileName);
+}
+function menuSalvarComo(){
+  closeMenu();
+  const nome=prompt('Salvar como:', currentFileName);
+  if(nome===null) return;
+  const nomeF=nome.trim()||currentFileName;
+  currentFileName=nomeF.includes('.')?nomeF:nomeF+'.pybr';
+  document.querySelector('.tab-active').textContent=currentFileName;
+  doSave(currentFileName);
+}
+function doSave(nome){
+  const blob=new Blob([editor.value],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=nome;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  setStatus('Salvo: '+nome, true);
+}
+
+function menuEncerrar(){
+  closeMenu();
+  if(confirm('Deseja encerrar o PyBR IDE?')) window.close();
+}
+
+/* ══ RESIZER ══ */
+(function initResizer(){
+  const resizer = document.getElementById('resizer');
+  const pane    = document.getElementById('output-pane');
+  let startX, startW;
+
+  resizer.addEventListener('mousedown', e=>{
+    startX = e.clientX;
+    startW = pane.offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    function onMove(e){
+      const delta = startX - e.clientX;   // drag left = wider
+      const newW  = Math.min(Math.max(startW + delta, 180), window.innerWidth * 0.70);
+      pane.style.width = newW + 'px';
+    }
+    function onUp(){
+      resizer.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+})();
+
+buildModal();
+
+// Restaura último código ou abre exemplo padrão
+const _saved = localStorage.getItem('pybr-code');
+if(_saved !== null){
+  editor.value = _saved;
+  const _fname = localStorage.getItem('pybr-filename');
+  if(_fname){ currentFileName=_fname; document.querySelector('.tab-active').textContent=_fname; }
+  updateHL();
+  editor.focus();
+} else {
+  loadExample('basico');
+}
+
+// Salva automaticamente a cada alteração no editor
+editor.addEventListener('input', ()=>{
+  localStorage.setItem('pybr-code', editor.value);
+});
+
+</script>
+<!-- SOBRE MODAL -->
+<div id="sobre-overlay" onclick="if(event.target===this)closeSobre()">
+  <div id="sobre-box">
+    <div id="sobre-icon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+              stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div id="sobre-title">PyBR IDE</div>
+    <div id="sobre-sub">
+      Ambiente de desenvolvimento integrado para a<br>
+      linguagem PyBR — Python em Português do Brasil.<br><br>
+      Criado para facilitar o aprendizado de programação<br>
+      com comandos e funções em português.
+    </div>
+    <div id="sobre-author">
+      Desenvolvido por Wilson José Andriolli Junior — 2026
+    </div>
+    <button id="sobre-close-btn" onclick="closeSobre()">Fechar</button>
+  </div>
+</div>
+
+</body>
+</html>
