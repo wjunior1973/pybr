@@ -254,6 +254,35 @@ body.dark .menu-item.danger:hover{background:#2a0e0e;}
   background:var(--surface3);border:1px solid var(--border);color:var(--text-dim);font-weight:600;}
 #ac-tip{font-size:.65rem;color:var(--text-dim);padding:4px 12px 5px;
   border-top:1px solid var(--border);background:var(--surface2);border-radius:0 0 var(--r) var(--r);}
+
+/* ── HOVER TOOLTIP ── */
+#hl-tooltip{
+  display:none;position:fixed;z-index:9998;
+  background:var(--surface);border:1.5px solid var(--border2);
+  border-radius:var(--r);box-shadow:var(--sh2);
+  max-width:320px;min-width:180px;pointer-events:none;
+  animation:fu .12s ease;
+}
+.tt-head{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 14px 7px;border-bottom:1px solid var(--border);
+  background:var(--surface3);border-radius:var(--r) var(--r) 0 0;
+}
+.tt-cmd{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.85rem;color:var(--kw);}
+.tt-cmd.fn{color:var(--fn);}
+.tt-tag{font-size:.58rem;padding:2px 7px;border-radius:20px;
+  background:var(--accent-lt);border:1px solid var(--border);
+  color:var(--accent);font-weight:700;letter-spacing:.4px;margin-left:auto;}
+.tt-body{padding:8px 14px 10px;font-size:.74rem;color:var(--text-mid);line-height:1.55;}
+.tt-py{font-size:.65rem;color:var(--text-dim);padding:0 14px 8px;
+  font-family:'JetBrains Mono',monospace;border-top:1px solid var(--border);
+  padding-top:6px;margin-top:2px;}
+.tt-py b{color:var(--text-dim);font-weight:600;}
+
+/* highlighted tokens visual style (pointer events via textarea overlay) */
+#hl .h-kw, #hl .h-fn, #hl .h-bool{
+  border-radius:2px;
+}
 </style>
 </head>
 <body>
@@ -379,6 +408,13 @@ body.dark .menu-item.danger:hover{background:#2a0e0e;}
     <div id="mcats"></div>
     <div id="mbody"><div id="ref-empty">Nenhum resultado encontrado.</div></div>
   </div>
+</div>
+
+<!-- HOVER TOOLTIP -->
+<div id="hl-tooltip">
+  <div class="tt-head"><span class="tt-cmd" id="tt-cmd"></span><span class="tt-tag" id="tt-tag"></span></div>
+  <div class="tt-body" id="tt-body"></div>
+  <div class="tt-py" id="tt-py"></div>
 </div>
 
 <!-- AUTOCOMPLETE POPUP (deve vir antes do script) -->
@@ -1319,6 +1355,189 @@ editor.addEventListener('keydown', e => {
   /* fechar ao perder foco / clicar fora --------------------------- */
   editor.addEventListener('blur',()=>setTimeout(closeAC,150));
   document.addEventListener('mousedown',ev=>{if(!box.contains(ev.target))closeAC();});
+})();
+
+/* ══════════════════════════════════════════════════
+   HOVER TOOLTIP
+══════════════════════════════════════════════════ */
+(function initTooltip(){
+  const tip   = document.getElementById('hl-tooltip');
+  const ttCmd = document.getElementById('tt-cmd');
+  const ttTag = document.getElementById('tt-tag');
+  const ttBody= document.getElementById('tt-body');
+  const ttPy  = document.getElementById('tt-py');
+
+  /* Mapas de descrição rápida para tooltip */
+  const TOOLTIP_MAP = {};
+
+  // REF é declarado antes deste bloco
+  REF.forEach(r => {
+    const key = r.cmd.toLowerCase();
+    TOOLTIP_MAP[key] = { cmd: r.cmd, cat: r.cat, desc: r.desc, isFn: false };
+    if(r.cat === 'Funções Nativas' || r.cat === 'Trigonometria') {
+      TOOLTIP_MAP[key].isFn = true;
+    }
+  });
+
+  const EXTRA = {
+    'importar':  { cmd:'importar',    cat:'Módulos',       desc:'Importa um módulo para o programa', isFn:false },
+    'de':        { cmd:'de',          cat:'Módulos',       desc:'Importa itens específicos de um módulo', isFn:false },
+    'como':      { cmd:'como',        cat:'Módulos',       desc:'Define um apelido ao importar módulo', isFn:false },
+    'com':       { cmd:'com',         cat:'Outros',        desc:'Gerenciador de contexto (abre/fecha recursos automaticamente)', isFn:false },
+    'exceto':    { cmd:'exceto',      cat:'Erros',         desc:'Captura e trata exceções lançadas no bloco "tente"', isFn:false },
+    'finalmente':{ cmd:'finalmente',  cat:'Erros',         desc:'Bloco sempre executado ao final do "tente/exceto"', isFn:false },
+    'apagar':    { cmd:'apagar',      cat:'Outros',        desc:'Remove uma variável ou elemento de uma coleção', isFn:false },
+    'gerar':     { cmd:'gerar',       cat:'Outros',        desc:'Produz um valor em uma função geradora', isFn:false },
+    'é':         { cmd:'é',           cat:'Lógica',        desc:'Verifica identidade de objetos (mesma referência na memória)', isFn:false },
+    'lambda':    { cmd:'lambda',      cat:'Funções',       desc:'Cria uma função anônima de uma linha', isFn:false },
+    'arredondar':{ cmd:'arredondar',  cat:'Funções Nativas',desc:'Arredonda um número para o inteiro mais próximo', isFn:true },
+    'raiz':      { cmd:'raiz',        cat:'Trigonometria', desc:'Calcula a raiz quadrada de um número', isFn:true },
+    'seno':      { cmd:'seno',        cat:'Trigonometria', desc:'Seno de um ângulo em radianos', isFn:true },
+    'cosseno':   { cmd:'cosseno',     cat:'Trigonometria', desc:'Cosseno de um ângulo em radianos', isFn:true },
+    'tangente':  { cmd:'tangente',    cat:'Trigonometria', desc:'Tangente de um ângulo em radianos', isFn:true },
+    'arcoseno':  { cmd:'arcoseno',    cat:'Trigonometria', desc:'Arco-seno: retorna o ângulo (em rad) cujo seno é o valor dado', isFn:true },
+    'arcocosseno':{ cmd:'arcocosseno',cat:'Trigonometria', desc:'Arco-cosseno: retorna o ângulo (em rad) cujo cosseno é o valor dado', isFn:true },
+    'arcotangente':{ cmd:'arcotangente',cat:'Trigonometria',desc:'Arco-tangente: retorna o ângulo (em rad) cuja tangente é o valor dado', isFn:true },
+    'graus_para_rad':{ cmd:'graus_para_rad',cat:'Trigonometria',desc:'Converte um ângulo de graus para radianos', isFn:true },
+    'rad_para_graus':{ cmd:'rad_para_graus',cat:'Trigonometria',desc:'Converte um ângulo de radianos para graus', isFn:true },
+    'matemática':{ cmd:'matemática',  cat:'Módulos',       desc:'Módulo com funções e constantes matemáticas avançadas (matemática.pi, matemática.seno…)', isFn:false },
+  };
+  Object.assign(TOOLTIP_MAP, EXTRA);
+
+  const PY_EQUIV = Object.assign({}, KW_MAP, {
+    'arredondar':'round','raiz':'math.sqrt','seno':'math.sin','cosseno':'math.cos',
+    'tangente':'math.tan','arcoseno':'math.asin','arcocosseno':'math.acos',
+    'arcotangente':'math.atan','graus_para_rad':'math.radians','rad_para_graus':'math.degrees',
+    'matemática':'math',
+  });
+
+  // Ordena palavras-chave por comprimento desc para match mais longo primeiro
+  const TT_KEYS = Object.keys(TOOLTIP_MAP).sort((a,b) => b.length - a.length);
+
+  let hideTimer = null;
+  let lastWord  = null;
+
+  function positionTip(x, y) {
+    const tw = tip.offsetWidth  || 280;
+    const th = tip.offsetHeight || 90;
+    let lx = x + 14;
+    let ly = y + 20;
+    if(lx + tw > window.innerWidth  - 8) lx = x - tw - 8;
+    if(ly + th > window.innerHeight - 8) ly = y - th - 8;
+    tip.style.left = Math.max(4, lx) + 'px';
+    tip.style.top  = Math.max(4, ly) + 'px';
+  }
+
+  function showTip(word, x, y) {
+    const key  = word.toLowerCase();
+    const info = TOOLTIP_MAP[key];
+    if(!info) { hideTip(); return; }
+    if(lastWord === key && tip.style.display === 'block') {
+      positionTip(x, y); return;
+    }
+    lastWord = key;
+    clearTimeout(hideTimer);
+
+    ttCmd.textContent = info.cmd;
+    ttCmd.className   = 'tt-cmd' + (info.isFn ? ' fn' : '');
+    ttTag.textContent = info.cat;
+    ttBody.textContent= info.desc;
+
+    const pyEq = PY_EQUIV[key];
+    if(pyEq) {
+      ttPy.style.display = 'block';
+      ttPy.innerHTML = `<b>Python:</b> <span style="color:var(--fn)">${pyEq}</span>`;
+    } else {
+      ttPy.style.display = 'none';
+    }
+
+    tip.style.display = 'block';
+    positionTip(x, y);
+  }
+
+  function hideTip() {
+    lastWord = null;
+    hideTimer = setTimeout(() => { tip.style.display = 'none'; }, 80);
+  }
+
+  /* ── Detecta token sob o cursor usando posição de caractere ── */
+  function getWordAtMouse(e) {
+    const ta = document.getElementById('editor');
+    const rect = ta.getBoundingClientRect();
+
+    // Estilo do editor para medir caracteres
+    const style  = window.getComputedStyle(ta);
+    const lineH  = parseFloat(style.lineHeight) || (parseFloat(style.fontSize) * 1.7);
+    const padTop = parseFloat(style.paddingTop) || 18;
+    const padLeft= parseFloat(style.paddingLeft)|| 18;
+    const fontSize = parseFloat(style.fontSize) || 14;
+
+    // Posição relativa ao textarea (com scroll)
+    const relX = e.clientX - rect.left  - padLeft  + ta.scrollLeft;
+    const relY = e.clientY - rect.top   - padTop   + ta.scrollTop;
+
+    const lineIdx = Math.floor(relY / lineH);
+    const lines   = ta.value.split('\n');
+    if(lineIdx < 0 || lineIdx >= lines.length) return null;
+
+    const line = lines[lineIdx];
+
+    // Mede posição de caractere usando canvas
+    const canvas  = getWordAtMouse._canvas || (getWordAtMouse._canvas = document.createElement('canvas'));
+    const ctx     = canvas.getContext('2d');
+    ctx.font      = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+
+    let charIdx = 0;
+    for(let c = 0; c <= line.length; c++) {
+      const w = ctx.measureText(line.slice(0, c)).width;
+      if(w > relX) { charIdx = Math.max(0, c - 1); break; }
+      charIdx = c;
+    }
+
+    // Extrai a palavra em charIdx
+    const before = line.slice(0, charIdx);
+    const after  = line.slice(charIdx);
+    const mBef   = before.match(/[a-zA-ZÀ-ÿ_0-9]*$/);
+    const mAft   = after.match(/^[a-zA-ZÀ-ÿ_0-9]*/);
+    const word   = (mBef ? mBef[0] : '') + (mAft ? mAft[0] : '');
+
+    if(!word) return null;
+
+    // Verifica se a palavra (ou prefixo multi-token) está no mapa
+    // Tenta match multi-palavra (ex: "senão se")
+    for(const k of TT_KEYS) {
+      const kwords = k.split(' ');
+      if(kwords.length > 1) {
+        // multi-word: verifica se a linha tem esse padrão começando antes do cursor
+        const idx = line.toLowerCase().lastIndexOf(k, charIdx + k.length);
+        if(idx !== -1 && charIdx >= idx && charIdx <= idx + k.length) {
+          return k;
+        }
+      }
+    }
+    return word || null;
+  }
+
+  /* Captura mousemove no textarea (está sobre o #hl) */
+  const ta = document.getElementById('editor');
+  let moveTimer = null;
+
+  ta.addEventListener('mousemove', e => {
+    clearTimeout(moveTimer);
+    moveTimer = setTimeout(() => {
+      const word = getWordAtMouse(e);
+      if(word) showTip(word, e.clientX, e.clientY);
+      else hideTip();
+    }, 30);
+  });
+
+  ta.addEventListener('mouseleave', () => {
+    clearTimeout(moveTimer);
+    hideTip();
+  });
+
+  // Esconde ao digitar
+  ta.addEventListener('keydown', hideTip);
 })();
 
 /* ══════════════════════════════════════════════════
