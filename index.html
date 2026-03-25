@@ -237,6 +237,23 @@ body.dark .menu-item.danger:hover{background:#2a0e0e;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
 ::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+
+/* ── AUTOCOMPLETE ── */
+#ac{display:none;position:fixed;z-index:9999;background:var(--surface);
+  border:1.5px solid var(--border2);border-radius:var(--r);box-shadow:var(--sh2);
+  min-width:210px;max-width:320px;max-height:220px;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:var(--border2) var(--surface3);
+  font-family:'JetBrains Mono',monospace;font-size:.8rem;}
+.ac-row{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;
+  border-left:2.5px solid transparent;white-space:nowrap;transition:background .07s;}
+.ac-row:hover,.ac-row.on{background:var(--accent-lt);border-left-color:var(--accent);}
+.ac-row.on .ac-w{color:var(--accent);}
+.ac-w{font-weight:700;color:var(--kw);}
+.ac-w b{color:var(--accent3);font-weight:700;}
+.ac-k{margin-left:auto;font-size:.6rem;padding:1px 6px;border-radius:10px;
+  background:var(--surface3);border:1px solid var(--border);color:var(--text-dim);font-weight:600;}
+#ac-tip{font-size:.65rem;color:var(--text-dim);padding:4px 12px 5px;
+  border-top:1px solid var(--border);background:var(--surface2);border-radius:0 0 var(--r) var(--r);}
 </style>
 </head>
 <body>
@@ -363,6 +380,9 @@ body.dark .menu-item.danger:hover{background:#2a0e0e;}
     <div id="mbody"><div id="ref-empty">Nenhum resultado encontrado.</div></div>
   </div>
 </div>
+
+<!-- AUTOCOMPLETE POPUP (deve vir antes do script) -->
+<div id="ac"><div id="ac-tip">↑↓ navegar &nbsp;·&nbsp; Tab/Enter confirmar &nbsp;·&nbsp; Esc fechar</div></div>
 
 <script>
 /* ══════════════════════════════════════════════════
@@ -1159,6 +1179,147 @@ editor.addEventListener('keydown', e => {
   }
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); runCode(); }
 });
+
+/* ══════════════════════════════════════════════════
+   AUTOCOMPLETE
+══════════════════════════════════════════════════ */
+(function(){
+  const box = document.getElementById('ac');
+  const tip = document.getElementById('ac-tip');
+  if(!box){ console.error('ac div not found'); return; }
+
+  /* vocabulário --------------------------------------------------- */
+  const VOCAB=[];
+  const _seen=new Set();
+  function addW(w,cat){if(!w||_seen.has(w))return;_seen.add(w);VOCAB.push({w,cat});}
+  Object.keys(KW_MAP).forEach(k=>addW(k,'Palavra-chave'));
+  ['escreva','leia','intervalo','comprimento','tipo','inteiro','decimal','texto',
+   'lista','conjunto','dicionário','máximo','mínimo','soma','ordenar','arredondar',
+   'raiz','seno','cosseno','tangente','arcoseno','arcocosseno','arcotangente',
+   'graus_para_rad','rad_para_graus','matemática'].forEach(k=>addW(k,'Função'));
+  ['Verdadeiro','Falso','Nulo'].forEach(k=>addW(k,'Valor'));
+  REF.forEach(r=>addW(r.cmd,r.cat));
+  VOCAB.sort((a,b)=>a.w.localeCompare(b.w,'pt'));
+
+  /* estado -------------------------------------------------------- */
+  let isOpen=false, list=[], sel=-1, pfx='';
+
+  /* prefixo -------------------------------------------------------- */
+  function getPrefix(pos){
+    const m=editor.value.slice(0,pos).match(/[a-zA-ZÀ-ÿ_][a-zA-ZÀ-ÿ_0-9]*$/);
+    return m?m[0]:'';
+  }
+
+  /* posicionamento: injeta span na camada #hl para medir --------- */
+  function place(pos){
+    const before=editor.value.slice(0,pos);
+    const after=editor.value.slice(pos);
+    const saved=hlEl.innerHTML;
+    hlEl.innerHTML=hlCode(before)
+      +'<span id="_acm_" style="display:inline-block;width:1px;height:1em"></span>'
+      +hlCode(after)+'\n';
+    const m=document.getElementById('_acm_');
+    if(!m){hlEl.innerHTML=saved;return;}
+    const r=m.getBoundingClientRect();
+    hlEl.innerHTML=saved; // restaura
+    // posiciona o popup abaixo (ou acima se não couber)
+    const pH=Math.min(220,list.length*32+30);
+    const top=(window.innerHeight-r.bottom-4)>=pH ? r.bottom+2 : r.top-pH-2;
+    box.style.left=Math.max(4,Math.min(r.left,window.innerWidth-330))+'px';
+    box.style.top=Math.max(4,top)+'px';
+  }
+
+  /* render -------------------------------------------------------- */
+  function esc2(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function hi(w,p){
+    if(!p)return esc2(w);
+    const i=w.toLowerCase().indexOf(p.toLowerCase());
+    if(i<0)return esc2(w);
+    return esc2(w.slice(0,i))+'<b>'+esc2(w.slice(i,i+p.length))+'</b>'+esc2(w.slice(i+p.length));
+  }
+  function render(){
+    box.querySelectorAll('.ac-row').forEach(el=>el.remove());
+    list.forEach((it,i)=>{
+      const d=document.createElement('div');
+      d.className='ac-row'+(i===sel?' on':'');
+      d.innerHTML=`<span class="ac-w">${hi(it.w,pfx)}</span><span class="ac-k">${esc2(it.cat)}</span>`;
+      d.addEventListener('mousedown',ev=>{ev.preventDefault();apply(it);});
+      box.insertBefore(d,tip);
+    });
+  }
+  function setSel(i){
+    sel=i;
+    box.querySelectorAll('.ac-row').forEach((el,j)=>{
+      el.classList.toggle('on',j===i);
+      if(j===i)el.scrollIntoView({block:'nearest'});
+    });
+  }
+
+  /* abrir / fechar ------------------------------------------------ */
+  function openAC(matched,prefix,pos){
+    list=matched; pfx=prefix; sel=-1;
+    render();
+    box.style.display='block';
+    isOpen=true;
+    place(pos);
+  }
+  function closeAC(){
+    box.style.display='none';
+    isOpen=false; sel=-1;
+  }
+
+  /* aplicar ------------------------------------------------------- */
+  function apply(item){
+    const pos=editor.selectionStart;
+    const plen=getPrefix(pos).length;
+    const start=pos-plen;
+    const ref=REF.find(r=>r.cmd===item.w);
+    const ins=ref?ref.insert:item.w;
+    editor.value=editor.value.slice(0,start)+ins+editor.value.slice(pos);
+    editor.selectionStart=editor.selectionEnd=start+ins.length;
+    updateHL();
+    localStorage.setItem('pybr-code',editor.value);
+    closeAC();
+    editor.focus();
+  }
+
+  /* evento: input ------------------------------------------------- */
+  editor.addEventListener('input',()=>{
+    const pos=editor.selectionStart;
+    const prefix=getPrefix(pos);
+    if(prefix.length<2){closeAC();return;}
+    const pl=prefix.toLowerCase();
+    const matched=VOCAB.filter(v=>v.w.toLowerCase().startsWith(pl)&&v.w.toLowerCase()!==pl);
+    if(!matched.length){closeAC();return;}
+    openAC(matched,prefix,pos);
+  });
+
+  /* evento: teclado (fase de captura) ----------------------------- */
+  editor.addEventListener('keydown',ev=>{
+    if((ev.ctrlKey||ev.metaKey)&&ev.key===' '){
+      ev.preventDefault();
+      const pos=editor.selectionStart;
+      const prefix=getPrefix(pos);
+      const pl=prefix.toLowerCase();
+      const matched=pl.length>=1
+        ?VOCAB.filter(v=>v.w.toLowerCase().startsWith(pl)&&v.w!==prefix)
+        :VOCAB.slice(0,20);
+      if(matched.length)openAC(matched,prefix,pos);
+      return;
+    }
+    if(!isOpen)return;
+    if(ev.key==='ArrowDown'){ev.preventDefault();setSel((sel+1)%list.length);return;}
+    if(ev.key==='ArrowUp'){ev.preventDefault();setSel((sel-1+list.length)%list.length);return;}
+    if((ev.key==='Tab'||ev.key==='Enter')&&sel>=0){
+      ev.preventDefault();ev.stopPropagation();apply(list[sel]);return;
+    }
+    if(ev.key==='Escape'){ev.stopPropagation();closeAC();return;}
+  },true);
+
+  /* fechar ao perder foco / clicar fora --------------------------- */
+  editor.addEventListener('blur',()=>setTimeout(closeAC,150));
+  document.addEventListener('mousedown',ev=>{if(!box.contains(ev.target))closeAC();});
+})();
 
 /* ══════════════════════════════════════════════════
    TRANSPILER
