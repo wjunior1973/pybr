@@ -2493,8 +2493,25 @@ function menuEncerrar(){
 (function initResizer(){
   const resizer = document.getElementById('resizer');
   const pane    = document.getElementById('output-pane');
+  const STORAGE_KEY = 'pybr-output-width';
   let startX, startW;
 
+  function clampWidth(w){
+    return Math.min(Math.max(w, 180), window.innerWidth * 0.70);
+  }
+
+  function saveWidth(){
+    localStorage.setItem(STORAGE_KEY, pane.offsetWidth);
+  }
+
+  function restoreWidth(){
+    const savedW = localStorage.getItem(STORAGE_KEY);
+    if(savedW){
+      pane.style.width = clampWidth(parseInt(savedW, 10)) + 'px';
+    }
+  }
+
+  // ── Mouse drag ──
   resizer.addEventListener('mousedown', e=>{
     startX = e.clientX;
     startW = pane.offsetWidth;
@@ -2503,9 +2520,7 @@ function menuEncerrar(){
     document.body.style.userSelect = 'none';
 
     function onMove(e){
-      const delta = startX - e.clientX;   // drag left = wider
-      const newW  = Math.min(Math.max(startW + delta, 180), window.innerWidth * 0.70);
-      pane.style.width = newW + 'px';
+      pane.style.width = clampWidth(startW + (startX - e.clientX)) + 'px';
     }
     function onUp(){
       resizer.classList.remove('dragging');
@@ -2513,17 +2528,37 @@ function menuEncerrar(){
       document.body.style.userSelect = '';
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
-      localStorage.setItem('pybr-output-width', pane.offsetWidth);
+      saveWidth();
     }
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
   });
 
-  // Restaura última largura salva
-  const savedW = localStorage.getItem('pybr-output-width');
-  if(savedW){
-    const w = Math.min(Math.max(parseInt(savedW, 10), 180), window.innerWidth * 0.70);
-    pane.style.width = w + 'px';
+  // ── Touch drag ──
+  resizer.addEventListener('touchstart', e=>{
+    startX = e.touches[0].clientX;
+    startW = pane.offsetWidth;
+    resizer.classList.add('dragging');
+
+    function onTouchMove(e){
+      e.preventDefault();
+      pane.style.width = clampWidth(startW + (startX - e.touches[0].clientX)) + 'px';
+    }
+    function onTouchEnd(){
+      resizer.classList.remove('dragging');
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      saveWidth();
+    }
+    document.addEventListener('touchmove', onTouchMove, {passive:false});
+    document.addEventListener('touchend', onTouchEnd);
+  }, {passive:true});
+
+  // Restaura largura salva após o layout estar pronto
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', restoreWidth);
+  } else {
+    restoreWidth();
   }
 })();
 
