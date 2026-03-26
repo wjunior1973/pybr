@@ -2513,10 +2513,18 @@ function menuEncerrar(){
       document.body.style.userSelect = '';
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
+      localStorage.setItem('pybr-output-width', pane.offsetWidth);
     }
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
   });
+
+  // Restaura última largura salva
+  const savedW = localStorage.getItem('pybr-output-width');
+  if(savedW){
+    const w = Math.min(Math.max(parseInt(savedW, 10), 180), window.innerWidth * 0.70);
+    pane.style.width = w + 'px';
+  }
 })();
 
 buildModal();
