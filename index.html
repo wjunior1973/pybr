@@ -1606,12 +1606,147 @@ inputBox.addEventListener('keydown',e=>{
   }
 });
 
+/* ── Error line tracker ── */
+let _currentLine = 0;
+
+function getErrorSuggestion(msg, lineText) {
+  const t = (lineText||'').trim();
+  const m = msg||'';
+  // Sugestões baseadas no tipo de erro e conteúdo da linha
+  if (/não está definido|not defined/i.test(m)) {
+    const varName = m.match(/'([^']+)'/)?.[1] || '';
+    return `💡 A variável '${varName}' foi usada antes de ser definida. Verifique se você digitou o nome corretamente ou se esqueceu de atribuir um valor antes de usar.`;
+  }
+  if (/indice.*fora|index.*out|índice/i.test(m)||/IndexError/i.test(m)) {
+    return `💡 Você tentou acessar uma posição que não existe na lista. Lembre-se que listas começam no índice 0. Use len() para verificar o tamanho antes de acessar.`;
+  }
+  if (/divisão.*zero|division.*zero/i.test(m)||/ZeroDivisionError/i.test(m)) {
+    return `💡 Divisão por zero não é permitida. Adicione uma verificação: "se divisor != 0:" antes de realizar a divisão.`;
+  }
+  if (/inválida|invalid.*literal|não.*número/i.test(m)||t.includes('inteiro(')||t.includes('decimal(')) {
+    return `💡 Conversão de tipo falhou. Verifique se o valor sendo convertido realmente é um número. Use a função tipo() para inspecionar o valor antes.`;
+  }
+  if (/não iterável|not iterable/i.test(m)) {
+    return `💡 Você tentou percorrer algo que não é uma lista, texto ou sequência. Verifique se a variável do "para...em" contém uma lista ou texto.`;
+  }
+  if (/AttributeError|atributo/i.test(m)||/método.*não.*encontrado/i.test(m)) {
+    const mname = m.match(/'([^']+)'/g)?.[1]?.replace(/'/g,'') || '';
+    return `💡 O método ou atributo '${mname}' não existe para esse tipo de dado. Confira a ortografia ou consulte a Referência (botão 📖) para ver os métodos disponíveis.`;
+  }
+  if (/loop infinito/i.test(m)) {
+    return `💡 O laço "enquanto" nunca terminou. Verifique se a condição de parada está correta e se a variável de controle está sendo atualizada dentro do laço.`;
+  }
+  if (/expressão inválida/i.test(m)) {
+    return `💡 Expressão com erro de sintaxe. Verifique: parênteses abertos sem fechar, operadores faltando (ex: 2x em vez de 2*x), ou uso incorreto de aspas.`;
+  }
+  if (/AssertionError/i.test(m)) {
+    return `💡 A verificação "afirme" falhou. A condição testada retornou Falso. Inspecione os valores das variáveis envolvidas.`;
+  }
+  if (t.includes('=') && !t.includes('==') && /^(se|enquanto|para)\s/.test(t)) {
+    return `💡 Você usou "=" (atribuição) dentro de uma condição. Para comparar valores, use "==" (dois sinais de igual).`;
+  }
+  if (/:$/.test(t) === false && /^(se|enquanto|para|def|classe|tente|exceto|senão|senãose)\s/.test(t)) {
+    return `💡 Parece que falta ":" no final desta linha. Blocos como "se", "enquanto", "para" e "def" precisam terminar com dois pontos.`;
+  }
+  if (/^(escreva|imprimir)\s+[^(]/.test(t)) {
+    return `💡 Você chamou escreva/imprimir sem parênteses. Use: escreva("mensagem") ou escreva(variavel).`;
+  }
+  return `💡 Revise a linha indicada e verifique: nomes de variáveis, parênteses balanceados, operadores e indentação (espaços no início).`;
+}
+
+function highlightErrorLine(lineNum) {
+  // Marca a linha com erro no editor visualmente
+  const lines = editor.value.split('\n');
+  if (lineNum < 1 || lineNum > lines.length) return;
+  // Scroll até a linha no textarea
+  const linesBefore = lines.slice(0, lineNum - 1).join('\n');
+  const pos = linesBefore.length + (lineNum > 1 ? 1 : 0);
+  editor.focus();
+  editor.setSelectionRange(pos, pos + lines[lineNum-1].length);
+  editor.blur();
+}
+
+function traduzirErro(msg) {
+  if (!msg) return msg;
+  let m = msg;
+
+  // Erros já em português — mantém como está
+  if (/não está definido|valor inválido|não encontrado|inválida|não iterável|loop infinito|erro lançado|assertionerror/i.test(m)) {
+    // ainda pode ter sufixo em inglês após "→", traduz a parte após a seta
+    m = m.replace(/→\s*(.+)$/, (_, rest) => '→ ' + traduzirErro(rest));
+    return m;
+  }
+
+  // TypeError / ReferenceError / RangeError genéricos
+  m = m.replace(/^TypeError:\s*/i, 'ErroTipo: ');
+  m = m.replace(/^ReferenceError:\s*/i, 'ErroReferência: ');
+  m = m.replace(/^RangeError:\s*/i, 'ErroIntervalo: ');
+  m = m.replace(/^SyntaxError:\s*/i, 'ErroSintaxe: ');
+
+  // Padrões comuns do JS traduzidos
+  m = m.replace(/(\w+) is not a function/g,       "'$1' não é uma função");
+  m = m.replace(/(\w+) is not defined/g,           "'$1' não está definido");
+  m = m.replace(/Cannot read propert(?:y|ies) (?:of|['"](.+)['"])(?: of undefined| of null)?/g,
+                "Não é possível ler propriedade de valor nulo/indefinido");
+  m = m.replace(/Cannot set propert(?:y|ies) .+ of (undefined|null)/g,
+                "Não é possível definir propriedade em valor nulo/indefinido");
+  m = m.replace(/(\w+) is not iterable/g,          "'$1' não é iterável");
+  m = m.replace(/assignment to constant variable/gi,"atribuição a variável constante");
+  m = m.replace(/identifier '(.+)' has already been declared/gi,
+                "identificador '$1' já foi declarado");
+  m = m.replace(/unexpected token/gi,              "token inesperado");
+  m = m.replace(/unexpected end of input/gi,       "fim de entrada inesperado");
+  m = m.replace(/invalid or unexpected token/gi,   "token inválido ou inesperado");
+  m = m.replace(/missing \) after argument list/gi,"')' faltando após a lista de argumentos");
+  m = m.replace(/missing \) after condition/gi,    "')' faltando após a condição");
+  m = m.replace(/missing : after property id/gi,   "':' faltando após o identificador");
+  m = m.replace(/division by zero/gi,              "divisão por zero");
+  m = m.replace(/maximum call stack size exceeded/gi,
+                "pilha de chamadas excedida (possível recursão infinita)");
+  m = m.replace(/\bis not\b/g,       'não é');
+  m = m.replace(/\bcannot\b/gi,      'não é possível');
+  m = m.replace(/\bundefined\b/g,    'indefinido');
+  m = m.replace(/\bnull\b/g,         'nulo');
+  m = m.replace(/\binvalid\b/gi,     'inválido');
+  m = m.replace(/\bunexpected\b/gi,  'inesperado');
+  m = m.replace(/\bexpected\b/gi,    'esperado');
+  m = m.replace(/\billegal\b/gi,     'ilegal');
+  m = m.replace(/\bstatement\b/gi,   'instrução');
+
+  // Traduz parte após "→" recursivamente
+  m = m.replace(/→\s*(.+)$/, (_, rest) => '→ ' + traduzirErro(rest));
+
+  return m;
+}
+
+function addErrorBlock(lineNum, lineText, msg) {
+  // Container do erro com linha, mensagem e sugestão
+  const d = document.createElement('div');
+  d.style.cssText = 'border-left:3px solid var(--err);margin:4px 0;padding:6px 12px;background:rgba(214,43,43,.07);border-radius:0 6px 6px 0;';
+
+  const header = document.createElement('div');
+  header.className = 'ol err';
+  header.style.marginBottom = '3px';
+  header.innerHTML = `<span class="op" style="color:var(--err)">✖</span><span><strong>Erro na linha ${lineNum}:</strong> ${esc(traduzirErro(msg))}</span>`;
+
+  const lineInfo = document.createElement('div');
+  lineInfo.style.cssText = 'font-size:.76rem;color:var(--text-mid);padding:4px 8px;background:var(--surface3);border-radius:4px;margin:4px 0;font-family:inherit;white-space:pre;border:1px solid var(--border);';
+  lineInfo.innerHTML = `<span style="color:var(--text-dim);user-select:none">${String(lineNum).padStart(3,' ')} │ </span><span style="color:var(--err)">${esc(lineText||'')}</span>`;
+
+  d.appendChild(header);
+  d.appendChild(lineInfo);
+  outputEl.appendChild(d);
+  outputEl.scrollTop = outputEl.scrollHeight;
+}
+
 async function runCode(){
   const src=editor.value.trim();
   if(!src){addOutput('Nenhum código para executar.','sys');return;}
   clearOutput();inputResolvers=[];inputLine.style.display='none';
+  _currentLine = 0;
   const t0=performance.now();setStatus('Executando…',true);
   const python=transpile(src);
+  const srcLines = src.split('\n');
   addOutput('── Iniciando execução ──','sys');
   try{
     await interpret(python);
@@ -1620,8 +1755,11 @@ async function runCode(){
     addOutput(`── Concluído em ${ms}ms ──`,'sys');
     setStatus('Execução concluída',true);
   }catch(e){
-    addOutput('ERRO: '+e.message,'err');
-    setStatus('Erro na execução',false);
+    const ln = _currentLine || 1;
+    const lineText = srcLines[ln - 1] || '';
+    addErrorBlock(ln, lineText, e.message);
+    setStatus(`Erro na linha ${ln}`,false);
+    highlightErrorLine(ln);
   }
 }
 
@@ -1732,6 +1870,7 @@ async function execBlock(ls,s,e,env,bi){
     const l=ls[i],t=l.trim();
     if(!t||t.startsWith('#')){i++;continue;}
     const ind=IND(l);if(ind<bi)break;if(ind>bi){i++;continue;}
+    _currentLine = i + 1;
     const be=findBE(ls,i+1,e,ind);
     const r=await execSt(ls,i,be,e,env,bi);
     if(r&&r.type)return r;
