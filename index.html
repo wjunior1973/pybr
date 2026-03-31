@@ -1781,7 +1781,16 @@ const IND=l=>l.match(/^(\s*)/)[1].length;
 async function interpret(code){
   const lines=code.split('\n'),env=createEnv();
   env.set('_range',_range);env.set('_type',_type);env.set('_zip',_zip);
-  env.set('_print',async(...a)=>{addOutput(a.map(pyStr).join(' '));});
+   env.set('_print',async(...a)=>{
+     let kwargs={};
+     if(a.length>0&&a[a.length-1]&&typeof a[a.length-1]==='object'&&a[a.length-1].__isKwargs){
+       kwargs=a.pop().__kwargs;
+     }
+     const sep=kwargs.separador!==undefined?kwargs.separador:' ';
+     const end=kwargs.fim!==undefined?kwargs.fim:'\n';
+     const out=a.map(pyStr).join(sep)+(end==='\n'?'':end);
+     addOutput(out);
+   });
   env.set('_input',async(p='')=>await waitForInput(String(p)));
 
   // módulo matemática (acessível como matemática.seno(x) etc.)
